@@ -178,6 +178,57 @@
                 </div>
             </div>
 
+            <!-- TAB: ADMIN -->
+            <div id="tab-admin" class="hidden-view animate-in fade-in duration-200 mt-4 space-y-4">
+                <div id="admin-login-box" class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+                    <h2 class="text-2xl font-black text-slate-100 uppercase mb-2 flex items-center gap-2">
+                        <i data-lucide="shield" class="w-6 h-6 text-amber-500"></i> Admin panel
+                    </h2>
+                    <p class="text-slate-400 text-sm mb-4">Zadej heslo pořadatele pro správu hry.</p>
+                    <input type="password" id="admin-password" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors mb-3" placeholder="Admin heslo">
+                    <button id="btn-admin-login" class="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl uppercase active:scale-95 transition-transform">
+                        Odemknout admin
+                    </button>
+                </div>
+
+                <div id="admin-panel-box" class="hidden-view space-y-4">
+                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+                        <div class="flex items-center justify-between gap-3 mb-4">
+                            <div>
+                                <h2 class="text-2xl font-black text-slate-100 uppercase flex items-center gap-2">
+                                    <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500"></i> Admin panel
+                                </h2>
+                                <p class="text-slate-400 text-sm">Odemčeno pro pořadatele.</p>
+                            </div>
+                            <button id="btn-admin-logout" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl active:scale-95">
+                                Zamknout
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3">
+                            <button id="btn-admin-undo-last" class="w-full bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                                Zpět poslední bodovou akci
+                            </button>
+                            <button id="btn-admin-reset-game" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                                Reset hry
+                            </button>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-3 leading-relaxed">
+                            Reset hry vynuluje skóre všech hráčů, odemkne boss fighty a smaže historii bodů. Hráči zůstanou přihlášení.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+                    <h2 class="text-xl font-black text-slate-100 uppercase mb-4 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-blue-400"></i> Historie bodů
+                    </h2>
+                    <div id="history-container" class="space-y-3">
+                        <div class="text-center text-slate-500 py-6 font-bold">Zatím žádná historie...</div>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Bottom Navigation Bar -->
@@ -197,6 +248,11 @@
                     <i data-lucide="info" class="w-6 h-6 mb-1"></i>
                     <span class="text-[10px] font-bold uppercase tracking-widest">Pravidla</span>
                 </button>
+                <button data-tab="admin" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
+                    <i data-lucide="shield" class="w-6 h-6 mb-1"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Admin</span>
+                </button>
+
             </div>
         </div>
 
@@ -206,7 +262,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, addDoc, deleteDoc, getDocs, writeBatch, query, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // --- FIREBASE INIT ---
         
@@ -226,6 +282,7 @@
         
         let app, auth, db;
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'vzp-rpg-default-id';
+        const ADMIN_PASSWORD = 'admin123'; // TADY SI ZMĚŇ HESLO PRO ADMIN PANEL
 
         // Ošetření chyby při absenci klíčů (lokální běh)
         try {
@@ -295,6 +352,9 @@
         let myPlayerName = localStorage.getItem('vzp_playerName') || '';
         let unsubPlayers = null;
         let unsubBoss = null;
+        let unsubHistory = null;
+        let actionsHistory = [];
+        let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
         // --- NÁSTROJE ---
         const formatNum = (num) => {
@@ -318,11 +378,76 @@
             }, 3000);
         };
 
+
+        const getPlayerNameById = (playerId) => {
+            if (playerId === currentUser?.uid) return myPlayerName || 'Ty';
+            return playersData.find(p => p.id === playerId)?.name || 'Neznámý hráč';
+        };
+
+        const addHistoryRecord = async (data) => {
+            if (!db || !currentUser) return;
+            const historyRef = collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory');
+            await addDoc(historyRef, {
+                actorId: currentUser.uid,
+                actorName: myPlayerName || 'Neznámý hráč',
+                createdAt: Date.now(),
+                undone: false,
+                ...data
+            });
+        };
+
+        const renderAdminAccess = () => {
+            const loginBox = document.getElementById('admin-login-box');
+            const panelBox = document.getElementById('admin-panel-box');
+            if (!loginBox || !panelBox) return;
+
+            if (adminUnlocked) {
+                loginBox.classList.add('hidden-view');
+                panelBox.classList.remove('hidden-view');
+            } else {
+                loginBox.classList.remove('hidden-view');
+                panelBox.classList.add('hidden-view');
+            }
+            lucide.createIcons();
+        };
+
+        const renderHistory = () => {
+            const container = document.getElementById('history-container');
+            if (!container) return;
+
+            const visibleHistory = actionsHistory.filter(a => !a.undone).slice(0, 30);
+            if (visibleHistory.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-6 font-bold">Zatím žádná historie...</div>`;
+                return;
+            }
+
+            container.innerHTML = visibleHistory.map(a => {
+                const amount = Number(a.amount || 0);
+                const isPositive = amount >= 0;
+                const date = a.createdAt ? new Date(a.createdAt) : null;
+                const time = date ? date.toLocaleTimeString('cs-CZ', { hour: '2-digit', minute: '2-digit' }) : '';
+                const targetText = a.targetName ? ` → ${a.targetName}` : '';
+                const label = a.label || a.type || 'Akce';
+
+                return `
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-100 leading-tight">${a.actorName || 'Hráč'}${targetText}</div>
+                        <div class="text-xs text-slate-400 mt-1 truncate">${label} ${time ? `• ${time}` : ''}</div>
+                    </div>
+                    <div class="font-black text-xl shrink-0 ${isPositive ? 'text-emerald-400' : 'text-rose-400'}">
+                        ${isPositive ? '+' : ''}${formatNum(amount)}
+                    </div>
+                </div>
+                `;
+            }).join('');
+        };
+
         // --- UI RENDER FUNKCE ---
         const renderStaticLists = () => {
             // Drinks
             document.getElementById('drinks-container').innerHTML = baseDrinks.map(drink => `
-                <button data-action="add-points" data-pts="${drink.pts}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
+                <button data-action="add-points" data-pts="${drink.pts}" data-label="${drink.name}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
                     <span class="font-bold text-center leading-tight pointer-events-none">${drink.name}</span>
                     <span class="text-emerald-400 font-black text-lg pointer-events-none">+${formatNum(drink.pts)}</span>
                 </button>
@@ -332,7 +457,7 @@
             document.getElementById('sponsorship-container').innerHTML = baseDrinks.map(drink => {
                 const sponPts = drink.pts * 1.5;
                 return `
-                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
+                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" data-label="Sponzoring: ${drink.name}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
                     <span class="font-bold text-xs text-center text-indigo-200 pointer-events-none">${drink.name}</span>
                     <span class="text-indigo-400 font-black pointer-events-none">+${formatNum(sponPts)}</span>
                 </button>
@@ -341,7 +466,7 @@
 
             // Quests
             document.getElementById('quests-container').innerHTML = quests.map(q => `
-                <button data-action="add-points" data-pts="${q.pts}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
+                <button data-action="add-points" data-pts="${q.pts}" data-label="${q.name}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
                     <span class="font-bold pr-4 leading-tight text-slate-200 pointer-events-none">${q.name}</span>
                     <span class="text-blue-400 font-black whitespace-nowrap bg-blue-400/10 px-3 py-1 rounded-lg pointer-events-none">+${formatNum(q.pts)}</span>
                 </button>
@@ -349,7 +474,7 @@
 
             // Debuffs
             document.getElementById('debuffs-container').innerHTML = debuffs.map(d => `
-                <button data-action="add-points" data-pts="${d.pts}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
+                <button data-action="add-points" data-pts="${d.pts}" data-label="${d.name}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
                     <span class="font-bold pr-4 leading-tight text-rose-100 pointer-events-none">${d.name}</span>
                     <span class="text-rose-400 font-black whitespace-nowrap bg-rose-950/50 px-3 py-1 rounded-lg pointer-events-none">${d.pts}</span>
                 </button>
@@ -434,12 +559,19 @@
         };
 
         // --- AKCE A LOGIKA ---
-        const handleAddPoints = async (amount, customMsg) => {
+        const handleAddPoints = async (amount, customMsg, label = 'Bodová akce') => {
             if (!currentUser || !db) return;
             const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
             
             await updateDoc(playerDoc, { score: myData.score + amount });
+            await addHistoryRecord({
+                type: 'points',
+                label,
+                amount,
+                playerId: currentUser.uid,
+                playerName: myPlayerName || myData.name || 'Neznámý hráč'
+            });
             
             const prefix = amount > 0 ? '+' : '';
             showToast(customMsg || `${prefix}${formatNum(amount)} bodů!`);
@@ -454,7 +586,7 @@
             
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', bossId);
             await setDoc(docRef, { claimedBy: myPlayerName, claimedById: currentUser.uid });
-            handleAddPoints(bossPts, `EPICKÉ! +${formatNum(bossPts)} za Boss Fight!`);
+            handleAddPoints(bossPts, `EPICKÉ! +${formatNum(bossPts)} za Boss Fight!`, `Boss Fight: ${bossName}`);
         };
 
         const handleTransfer = async () => {
@@ -477,9 +609,83 @@
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId), { 
                 score: targetPlayer.score + amount 
             });
+            await addHistoryRecord({
+                type: 'transfer',
+                label: 'Převod bodů',
+                amount: -amount,
+                playerId: currentUser.uid,
+                playerName: myPlayerName,
+                targetId,
+                targetName: targetPlayer.name
+            });
 
             document.getElementById('transfer-amount').value = '';
             showToast(`Převedeno ${formatNum(amount)} bodů hráči ${targetPlayer.name}`);
+        };
+
+
+
+        const handleAdminUndoLast = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin panel!", true);
+            if (!db) return;
+
+            const lastAction = actionsHistory.find(a => !a.undone && a.type !== 'reset');
+            if (!lastAction) return showToast("Není co vracet zpět.", true);
+
+            const playerId = lastAction.playerId || lastAction.actorId;
+            const player = playersData.find(p => p.id === playerId);
+            if (!player) return showToast("Hráč pro poslední akci už neexistuje.", true);
+
+            const batch = writeBatch(db);
+            batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId), {
+                score: (player.score || 0) - Number(lastAction.amount || 0)
+            });
+
+            if (lastAction.type === 'transfer' && lastAction.targetId) {
+                const target = playersData.find(p => p.id === lastAction.targetId);
+                if (target) {
+                    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', lastAction.targetId), {
+                        score: (target.score || 0) + Number(lastAction.amount || 0)
+                    });
+                }
+            }
+
+            batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', lastAction.id), {
+                undone: true,
+                undoneAt: Date.now(),
+                undoneBy: currentUser?.uid || 'admin'
+            });
+
+            await batch.commit();
+            showToast(`Vráceno zpět: ${lastAction.label || 'poslední akce'}`);
+        };
+
+        const handleAdminResetGame = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin panel!", true);
+            if (!db) return;
+
+            const sure = confirm('Opravdu resetovat hru? Vynuluje se skóre, boss fighty a historie bodů.');
+            if (!sure) return;
+
+            const batch = writeBatch(db);
+
+            const playersSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'players'));
+            playersSnap.docs.forEach(d => {
+                batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', d.id), { score: 0 });
+            });
+
+            const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
+            bossesSnap.docs.forEach(d => {
+                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+            });
+
+            const historySnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory'));
+            historySnap.docs.forEach(d => {
+                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
+            });
+
+            await batch.commit();
+            showToast("Hra resetována.");
         };
 
         // --- AUTH & SETUP ---
@@ -508,11 +714,20 @@
                 });
                 renderBosses();
             }, (err) => console.error("Firebase err:", err));
+
+            // Historie bodů
+            const historyRef = collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory');
+            const historyQuery = query(historyRef, orderBy('createdAt', 'desc'), limit(50));
+            unsubHistory = onSnapshot(historyQuery, (snapshot) => {
+                actionsHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHistory();
+            }, (err) => console.error("Firebase err:", err));
         };
 
         const initApp = async () => {
             lucide.createIcons();
             renderStaticLists();
+            renderAdminAccess();
 
             if (!auth) return; // Zastaví provedení pokud Firebase neprošlo inicializací
 
@@ -571,6 +786,7 @@
             try {
                 if(unsubPlayers) unsubPlayers();
                 if(unsubBoss) unsubBoss();
+                if(unsubHistory) unsubHistory();
                 if(auth) await signOut(auth);
                 localStorage.removeItem('vzp_playerName');
                 window.location.reload();
@@ -590,7 +806,8 @@
             if (action === 'add-points') {
                 const pts = parseFloat(btn.getAttribute('data-pts'));
                 const msg = btn.getAttribute('data-msg');
-                handleAddPoints(pts, msg);
+                const label = btn.getAttribute('data-label') || 'Bodová akce';
+                handleAddPoints(pts, msg, label);
             } else if (action === 'boss-fight') {
                 const id = btn.getAttribute('data-boss-id');
                 const pts = parseFloat(btn.getAttribute('data-boss-pts'));
@@ -599,8 +816,30 @@
             }
         });
 
+
+
+        document.getElementById('btn-admin-login').addEventListener('click', () => {
+            const password = document.getElementById('admin-password').value;
+            if (password !== ADMIN_PASSWORD) return showToast("Špatné admin heslo!", true);
+            adminUnlocked = true;
+            sessionStorage.setItem('vzp_adminUnlocked', 'true');
+            document.getElementById('admin-password').value = '';
+            renderAdminAccess();
+            showToast("Admin panel odemčen.");
+        });
+
+        document.getElementById('btn-admin-logout').addEventListener('click', () => {
+            adminUnlocked = false;
+            sessionStorage.removeItem('vzp_adminUnlocked');
+            renderAdminAccess();
+            showToast("Admin panel zamčen.");
+        });
+
+        document.getElementById('btn-admin-undo-last').addEventListener('click', handleAdminUndoLast);
+        document.getElementById('btn-admin-reset-game').addEventListener('click', handleAdminResetGame);
+
         // Tab Navigation
-        const tabs = ['score', 'leaderboard', 'rules'];
+        const tabs = ['score', 'leaderboard', 'rules', 'admin'];
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetTab = btn.getAttribute('data-tab');
