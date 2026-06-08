@@ -20,7 +20,7 @@
 <body class="bg-slate-950 text-slate-100 font-sans select-none overflow-x-hidden">
 
     <!-- Toast Notification -->
-    <div id="toast" class="hidden-view fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all">
+    <div id="toast" class="hidden-view fixed top-6 left-0 right-0 mx-auto z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all">
         <span id="toast-msg"></span>
     </div>
 
@@ -240,7 +240,7 @@
             setTimeout(() => {
                 const toastEl = document.getElementById('toast');
                 document.getElementById('toast-msg').innerText = "CHYBA: Doplň Firebase config v kódu (kolem řádku 208)!";
-                toastEl.className = "fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce bg-rose-600 text-white";
+                toastEl.className = "fixed top-6 left-0 right-0 mx-auto z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce bg-rose-600 text-white";
                 toastEl.classList.remove('hidden-view');
             }, 500);
         }
@@ -308,7 +308,7 @@
             const toastMsg = document.getElementById('toast-msg');
             
             toastMsg.innerText = msg;
-            toastEl.className = `fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce ${isError ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-emerald-950'}`;
+            toastEl.className = `fixed top-6 left-0 right-0 mx-auto z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce ${isError ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-emerald-950'}`;
             
             toastEl.classList.remove('hidden-view');
             
