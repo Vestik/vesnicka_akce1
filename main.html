@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Vesnická Zábava RPG</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Skrytí elementů místo React stavů */
+        .hidden-view { display: none !important; }
+        .pb-safe { padding-bottom: env(safe-area-inset-bottom, 2rem); }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans select-none overflow-x-hidden">
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden-view fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all">
+        <span id="toast-msg"></span>
+    </div>
+
+    <!-- LOGIN SCREEN (Viditelné by default) -->
+    <div id="login-screen" class="min-h-screen flex flex-col justify-center items-center p-6">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
+            <div class="text-center mb-8">
+                <i data-lucide="swords" class="w-16 h-16 mx-auto mb-4 text-amber-500"></i>
+                <h1 class="text-3xl font-black uppercase tracking-widest text-amber-500 mb-2">Vesnická Zábava RPG</h1>
+                <p class="text-slate-400">Přežij noc. Vyhraj bank.</p>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">Tvoje Jméno / Přezdívka</label>
+                    <input type="text" id="player-name" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors" placeholder="Např. Lojza">
+                </div>
+
+                <label class="flex items-center space-x-4 bg-slate-950 p-4 rounded-xl border border-slate-800 cursor-pointer">
+                    <input type="checkbox" id="paid-status" class="w-8 h-8 rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-700">
+                    <span class="font-bold text-lg select-none">Odevzdal jsem 100 Kč bankéři</span>
+                </label>
+
+                <button id="btn-login" class="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 font-black text-2xl py-5 rounded-xl uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-amber-900/20 mt-4">
+                    Vstoupit do hry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP SCREEN -->
+    <div id="main-screen" class="hidden-view pb-28 pt-20">
+        
+        <!-- Top Bar (Bank Info) -->
+        <div class="fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-40 px-4 py-3 shadow-md">
+            <div class="flex justify-between items-center max-w-md mx-auto">
+                <div class="text-center">
+                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Celkový Bank</div>
+                    <div id="total-bank" class="text-xl font-black text-amber-500">0 Kč</div>
+                </div>
+                <div class="flex gap-4">
+                    <div class="text-center bg-slate-800 px-3 py-1 rounded-lg">
+                        <span class="text-xs">🥇 1. místo</span>
+                        <div id="prize-1" class="font-bold text-amber-400">0 Kč</div>
+                    </div>
+                    <div class="text-center bg-slate-800 px-3 py-1 rounded-lg">
+                        <span class="text-xs">🥈 2. místo</span>
+                        <div id="prize-2" class="font-bold text-slate-300">0 Kč</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-md mx-auto px-4 w-full">
+            
+            <!-- TAB: SKÓRE -->
+            <div id="tab-score" class="space-y-8 animate-in fade-in duration-200">
+                <!-- My Score -->
+                <div class="bg-slate-900 p-6 rounded-3xl border border-slate-800 shadow-lg text-center mt-4">
+                    <div class="text-slate-400 font-bold uppercase text-sm mb-1">Moje body</div>
+                    <div id="my-score-display" class="text-6xl font-black text-white tracking-tighter">0</div>
+                </div>
+
+                <!-- Základní tankování -->
+                <div>
+                    <h2 class="text-xl font-black text-slate-300 mb-3 uppercase flex items-center gap-2">
+                        <i data-lucide="beer" class="w-5 h-5 text-amber-500"></i> Základní tankování
+                    </h2>
+                    <div id="drinks-container" class="grid grid-cols-2 gap-3"></div>
+                </div>
+
+                <!-- Side Questy -->
+                <div>
+                    <h2 class="text-xl font-black text-slate-300 mb-3 uppercase flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-blue-400"></i> Side Questy
+                    </h2>
+                    <div id="quests-container" class="space-y-3"></div>
+                </div>
+
+                <!-- Boss Fighty -->
+                <div>
+                    <h2 class="text-xl font-black text-amber-500 mb-3 uppercase flex items-center gap-2 drop-shadow-[0_0_10px_rgba(245,158,11,0.5)]">
+                        <i data-lucide="swords" class="w-5 h-5"></i> Boss Fighty (Globální)
+                    </h2>
+                    <div id="bosses-container" class="space-y-3"></div>
+                </div>
+
+                <!-- PEPA -->
+                <div class="bg-indigo-950/30 border border-indigo-900/50 p-5 rounded-3xl">
+                    <h2 class="text-xl font-black text-indigo-400 mb-4 uppercase flex items-center gap-2">
+                        <i data-lucide="handshake" class="w-5 h-5"></i> PEPA (Ekonomika)
+                    </h2>
+                    
+                    <div class="mb-6">
+                        <p class="text-sm text-indigo-300 mb-3 font-medium">
+                            <strong>Sponzoring:</strong> Kupuješ pití kamarádovi na mizině? Klikni sem a získej základní body × 1.5!
+                        </p>
+                        <div id="sponsorship-container" class="grid grid-cols-2 gap-2"></div>
+                    </div>
+
+                    <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800">
+                        <p class="text-sm text-slate-400 mb-3 font-medium">Směnný obchod s body: Dohodni se s někým a pošli mu body za panáka.</p>
+                        <select id="transfer-target" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 mb-3 text-slate-200 font-bold focus:outline-none focus:border-indigo-500">
+                            <option value="">-- Vyber hráče --</option>
+                        </select>
+                        <div class="flex gap-2">
+                            <input type="number" id="transfer-amount" placeholder="Kolik bodů?" class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-indigo-500">
+                            <button id="btn-transfer" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold px-4 rounded-xl shrink-0 active:scale-95">
+                                <i data-lucide="arrow-right" class="w-6 h-6"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Debuffy -->
+                <div>
+                    <h2 class="text-xl font-black text-rose-500 mb-3 uppercase flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i> Průsery (Debuffy)
+                    </h2>
+                    <div id="debuffs-container" class="grid grid-cols-1 gap-3"></div>
+                </div>
+            </div>
+
+            <!-- TAB: ŽEBŘÍČEK -->
+            <div id="tab-leaderboard" class="hidden-view animate-in fade-in duration-200 space-y-3 mt-4">
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-black text-slate-100 uppercase">Live Žebříček</h2>
+                    <p class="text-slate-400 text-sm">Real-time pořadí všech pijanů.</p>
+                </div>
+                <div id="leaderboard-container"></div>
+            </div>
+
+            <!-- TAB: PRAVIDLA -->
+            <div id="tab-rules" class="hidden-view animate-in fade-in duration-200 mt-4 space-y-4">
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+                    <h2 class="text-2xl font-black text-slate-100 uppercase mb-4 flex items-center gap-2">
+                        <i data-lucide="info" class="w-6 h-6 text-amber-500"></i> Pravidla
+                    </h2>
+                    <div class="space-y-4 text-slate-300 text-sm leading-relaxed">
+                        <p><strong>1. Kdo nepochopí, jeho mínus.</strong> Na spravedlivost se nehraje. Klikáš co jsi splnil/vypil.</p>
+                        <p><strong>2. Bank:</strong> Každý dává 100 Kč. Z celkového banku bere 1. místo přesně 75% a 2. místo 25%.</p>
+                        <p><strong>3. Boss Fighty:</strong> Tyhle šílenosti jsou globální. Kdo první splní a zaklikne, získá body a pro ostatní se to trvale uzamkne ("vyžráno").</p>
+                        <p><strong>4. PEPA systém:</strong> Jsi na mizině? Nech si koupit pití. Sponzor dostane body × 1.5 za tvůj drink. Můžeš se s ním i domluvit a poslat mu část svých bodů přes tlačítko převodu.</p>
+                        <p class="text-rose-400 font-bold mt-6 pt-4 border-t border-slate-800">Podvádění se trestá fyzickým násilím od pořadatele.</p>
+                    </div>
+                </div>
+
+                <!-- Účet / Odhlášení -->
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center">
+                    <h2 class="text-xl font-black text-slate-100 uppercase mb-2">Účet</h2>
+                    <p class="text-slate-400 text-sm mb-4">Přihlášen jako: <strong id="account-name" class="text-amber-500"></strong></p>
+                    <button id="btn-logout" class="w-full bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                        Odhlásit se / Změnit hráče
+                    </button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <div class="fixed bottom-0 left-0 w-full bg-slate-900 border-t border-slate-800 z-40 pb-safe">
+            <div class="flex justify-around items-center max-w-md mx-auto p-2">
+                <button data-tab="score" class="nav-btn text-amber-500 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
+                    <i data-lucide="user" class="w-6 h-6 mb-1"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Skóre</span>
+                </button>
+                
+                <button data-tab="leaderboard" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors relative">
+                    <i data-lucide="trophy" class="w-6 h-6 mb-1"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Žebříček</span>
+                </button>
+                
+                <button data-tab="rules" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
+                    <i data-lucide="info" class="w-6 h-6 mb-1"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Pravidla</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- FIREBASE INIT ---
+        
+        // POKUD POUŠTÍŠ LOKÁLNĚ (Visual Studio Live Server), MUSÍŠ VYPLNIT TYTO ÚDAJE!
+        // Získáš je v konzoli Firebase (Project Settings -> General -> Web App)
+        const localFirebaseConfig = {
+            // apiKey: "VLOZ_SVUJ_API_KLIC",
+            // authDomain: "tvuj-projekt.firebaseapp.com",
+            // projectId: "tvuj-projekt",
+            // storageBucket: "tvuj-projekt.appspot.com",
+            // messagingSenderId: "1234567890",
+            // appId: "1:1234567890:web:abcdef12345"
+        };
+
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : localFirebaseConfig;
+        
+        let app, auth, db;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vzp-rpg-default-id';
+
+        // Ošetření chyby při absenci klíčů (lokální běh)
+        try {
+            if (Object.keys(firebaseConfig).length === 0) {
+                throw new Error("Chybí Firebase config!");
+            }
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } catch (error) {
+            console.error("Firebase inicializace selhala:", error);
+            setTimeout(() => {
+                const toastEl = document.getElementById('toast');
+                document.getElementById('toast-msg').innerText = "CHYBA: Doplň Firebase config v kódu (kolem řádku 208)!";
+                toastEl.className = "fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce bg-rose-600 text-white";
+                toastEl.classList.remove('hidden-view');
+            }, 500);
+        }
+
+        // --- DATA KONFIGURACE ---
+        const baseDrinks = [
+            { id: 'pivo_male', name: 'Malé pivo', pts: 3 },
+            { id: 'pivo_velke', name: 'Velké pivo', pts: 5 },
+            { id: 'panak', name: 'Panák', pts: 15 },
+            { id: 'vino', name: 'Rozlévané víno', pts: 10 },
+            { id: 'voda', name: 'Voda/limonáda', pts: 2 }
+        ];
+
+        const quests = [
+            { name: 'Sníst klobásu/maso', pts: 20 },
+            { name: 'Sníst to přesně o půlnoci', pts: 40 },
+            { name: 'Tancovat na sérii min. 3 písniček', pts: 25 },
+            { name: 'Vyzvat k tanci někoho neznámého', pts: 50 },
+            { name: 'Nechat si koupit panák od někoho mimo partu', pts: 45 },
+            { name: 'Pivo podepsané od barmana', pts: 20 },
+            { name: 'Písnička na přání u kapely', pts: 40 },
+            { name: 'Být úplně první na parketu u nové série', pts: 30 },
+            { name: 'Stojka na parketu', pts: 40 },
+            { name: 'Kotrmelec', pts: 20 },
+            { name: 'Připít si se štamgasty', pts: 30 },
+            { name: 'Pronést láhev do areálu', pts: 100 },
+            { name: 'Za každý panák z vlastní láhve', pts: 10 },
+            { name: 'Rozjet vláček (min. 5 cizích lidí)', pts: 100 },
+            { name: 'Epické sólo na vzdušnou kytaru pod pódiem', pts: 25 },
+            { name: 'Společná fotka s pořadatelem', pts: 45 }
+        ];
+
+        const bosses = [
+            { id: 'zpev', name: 'Zazpívat si na pódiu do mikrofonu', pts: 200 },
+            { id: 'tanec_starsi', name: 'Tanec s nejstarším/vznešenějším', pts: 120 },
+            { id: 'panak_mix', name: 'Panák "všeho možného" od obsluhy', pts: 120 },
+            { id: 'rybnik', name: 'Koupel v rybníku', pts: 300 }
+        ];
+
+        const debuffs = [
+            { name: 'Rozlití vlastního pití', pts: -15 },
+            { name: 'Rozlití cizího pití (a platíš nové)', pts: -40 },
+            { name: 'Stěžování si na hudbu', pts: -5 },
+            { name: 'Zabavená láhev u vstupu', pts: -50 }
+        ];
+
+        // --- STAV APLIKACE ---
+        let currentUser = null;
+        let playersData = [];
+        let bossFightData = {};
+        let toastTimeout = null;
+        let myPlayerName = localStorage.getItem('vzp_playerName') || '';
+        let unsubPlayers = null;
+        let unsubBoss = null;
+
+        // --- NÁSTROJE ---
+        const formatNum = (num) => {
+            if (typeof num !== 'number') return num;
+            if (num % 1 !== 0) return num.toFixed(4); // Formátování na 4 desetinná místa
+            return num.toString();
+        };
+
+        const showToast = (msg, isError = false) => {
+            const toastEl = document.getElementById('toast');
+            const toastMsg = document.getElementById('toast-msg');
+            
+            toastMsg.innerText = msg;
+            toastEl.className = `fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-full font-bold text-center shadow-2xl w-[90%] max-w-sm transition-all animate-bounce ${isError ? 'bg-rose-600 text-white' : 'bg-emerald-500 text-emerald-950'}`;
+            
+            toastEl.classList.remove('hidden-view');
+            
+            if(toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastEl.classList.add('hidden-view');
+            }, 3000);
+        };
+
+        // --- UI RENDER FUNKCE ---
+        const renderStaticLists = () => {
+            // Drinks
+            document.getElementById('drinks-container').innerHTML = baseDrinks.map(drink => `
+                <button data-action="add-points" data-pts="${drink.pts}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
+                    <span class="font-bold text-center leading-tight pointer-events-none">${drink.name}</span>
+                    <span class="text-emerald-400 font-black text-lg pointer-events-none">+${formatNum(drink.pts)}</span>
+                </button>
+            `).join('');
+
+            // Sponsorship
+            document.getElementById('sponsorship-container').innerHTML = baseDrinks.map(drink => {
+                const sponPts = drink.pts * 1.5;
+                return `
+                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
+                    <span class="font-bold text-xs text-center text-indigo-200 pointer-events-none">${drink.name}</span>
+                    <span class="text-indigo-400 font-black pointer-events-none">+${formatNum(sponPts)}</span>
+                </button>
+                `;
+            }).join('');
+
+            // Quests
+            document.getElementById('quests-container').innerHTML = quests.map(q => `
+                <button data-action="add-points" data-pts="${q.pts}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
+                    <span class="font-bold pr-4 leading-tight text-slate-200 pointer-events-none">${q.name}</span>
+                    <span class="text-blue-400 font-black whitespace-nowrap bg-blue-400/10 px-3 py-1 rounded-lg pointer-events-none">+${formatNum(q.pts)}</span>
+                </button>
+            `).join('');
+
+            // Debuffs
+            document.getElementById('debuffs-container').innerHTML = debuffs.map(d => `
+                <button data-action="add-points" data-pts="${d.pts}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
+                    <span class="font-bold pr-4 leading-tight text-rose-100 pointer-events-none">${d.name}</span>
+                    <span class="text-rose-400 font-black whitespace-nowrap bg-rose-950/50 px-3 py-1 rounded-lg pointer-events-none">${d.pts}</span>
+                </button>
+            `).join('');
+        };
+
+        const renderBosses = () => {
+            document.getElementById('bosses-container').innerHTML = bosses.map(boss => {
+                const isClaimed = !!bossFightData[boss.id];
+                const claimer = isClaimed ? bossFightData[boss.id].claimedBy : '';
+
+                return `
+                <button ${isClaimed ? 'disabled' : ''} data-action="boss-fight" data-boss-id="${boss.id}" data-boss-pts="${boss.pts}" data-boss-name="${boss.name}" class="w-full p-5 rounded-2xl flex flex-col text-left transition-all relative overflow-hidden ${isClaimed ? 'bg-slate-900 border border-slate-800 opacity-60 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-amber-500 active:scale-[0.98] shadow-[0_0_20px_rgba(245,158,11,0.3)]'}">
+                    <div class="flex justify-between items-start mb-2 relative z-10 pointer-events-none">
+                        <span class="font-black uppercase pr-4 leading-tight ${isClaimed ? 'text-slate-500' : 'text-amber-950'}">${boss.name}</span>
+                        <span class="font-black text-xl whitespace-nowrap ${isClaimed ? 'text-slate-600' : 'text-amber-100 drop-shadow-md'}">+${formatNum(boss.pts)}</span>
+                    </div>
+                    ${isClaimed ? `<div class="mt-2 text-sm font-bold text-rose-500 flex items-center gap-1 pointer-events-none"><i data-lucide="check-circle" class="w-4 h-4"></i> Vyžráno hráčem: ${claimer}</div>` : ''}
+                </button>
+                `;
+            }).join('');
+            lucide.createIcons();
+        };
+
+        const updateMyScoreUI = () => {
+            const myData = playersData.find(p => p.id === currentUser?.uid) || { score: 0 };
+            document.getElementById('my-score-display').innerText = formatNum(myData.score);
+        };
+
+        const updateTopBar = () => {
+            const totalBank = playersData.length * 100;
+            const prize1 = totalBank * 0.75;
+            const prize2 = totalBank * 0.25;
+
+            document.getElementById('total-bank').innerText = `${formatNum(totalBank)} Kč`;
+            document.getElementById('prize-1').innerText = `${formatNum(prize1)} Kč`;
+            document.getElementById('prize-2').innerText = `${formatNum(prize2)} Kč`;
+        };
+
+        const renderLeaderboard = () => {
+            const container = document.getElementById('leaderboard-container');
+            const totalBank = playersData.length * 100;
+            const prize1 = totalBank * 0.75;
+            const prize2 = totalBank * 0.25;
+
+            if (playersData.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-10 font-bold">Zatím nikdo nehraje...</div>`;
+                return;
+            }
+
+            container.innerHTML = playersData.map((p, index) => {
+                const isMe = currentUser && p.id === currentUser.uid;
+                const isFirst = index === 0;
+                const isSecond = index === 1;
+
+                return `
+                <div class="flex items-center p-4 rounded-2xl border ${isMe ? 'bg-slate-800 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.15)]' : 'bg-slate-900 border-slate-800'} mb-3">
+                    <div class="w-10 font-black text-xl text-slate-500 text-center shrink-0">
+                        ${isFirst ? '🥇' : isSecond ? '🥈' : `${index + 1}.`}
+                    </div>
+                    <div class="flex-grow pl-3">
+                        <div class="font-bold text-lg text-slate-100 flex items-center gap-2">
+                            ${p.name} ${isMe ? `<span class="text-[10px] uppercase bg-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full">Ty</span>` : ''}
+                        </div>
+                        ${(isFirst || isSecond) && totalBank > 0 ? `<div class="text-xs font-bold text-amber-400/80 uppercase">Vyhrává ${formatNum(isFirst ? prize1 : prize2)} Kč</div>` : ''}
+                    </div>
+                    <div class="font-black text-2xl text-slate-200 shrink-0">
+                        ${formatNum(p.score)}
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // Aktualizace Select boxu pro převod
+            const selectEl = document.getElementById('transfer-target');
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="">-- Vyber hráče --</option>` + 
+                playersData.filter(p => p.id !== currentUser?.uid).map(p => `
+                    <option value="${p.id}">${p.name} (${formatNum(p.score)} b.)</option>
+                `).join('');
+            if(playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
+        };
+
+        // --- AKCE A LOGIKA ---
+        const handleAddPoints = async (amount, customMsg) => {
+            if (!currentUser || !db) return;
+            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
+            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+            
+            await updateDoc(playerDoc, { score: myData.score + amount });
+            
+            const prefix = amount > 0 ? '+' : '';
+            showToast(customMsg || `${prefix}${formatNum(amount)} bodů!`);
+        };
+
+        const handleBossFight = async (bossId, bossPts, bossName) => {
+            if (!currentUser || !db) return;
+            if (bossFightData[bossId]) {
+                showToast("Tohle už někdo vyžral!", true);
+                return;
+            }
+            
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', bossId);
+            await setDoc(docRef, { claimedBy: myPlayerName, claimedById: currentUser.uid });
+            handleAddPoints(bossPts, `EPICKÉ! +${formatNum(bossPts)} za Boss Fight!`);
+        };
+
+        const handleTransfer = async () => {
+            if (!currentUser || !db) return;
+            const targetId = document.getElementById('transfer-target').value;
+            const amount = parseFloat(document.getElementById('transfer-amount').value);
+            
+            if (!targetId || isNaN(amount) || amount <= 0) {
+                return showToast("Zadej platného hráče a částku!", true);
+            }
+            
+            const targetPlayer = playersData.find(p => p.id === targetId);
+            if (!targetPlayer) return showToast("Hráč nenalezen!", true);
+
+            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
+            
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid), { 
+                score: myData.score - amount 
+            });
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId), { 
+                score: targetPlayer.score + amount 
+            });
+
+            document.getElementById('transfer-amount').value = '';
+            showToast(`Převedeno ${formatNum(amount)} bodů hráči ${targetPlayer.name}`);
+        };
+
+        // --- AUTH & SETUP ---
+        const startRealtimeListeners = () => {
+            if (!currentUser || !db) return;
+
+            document.getElementById('account-name').innerText = myPlayerName;
+
+            // Hráči
+            const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+            unsubPlayers = onSnapshot(playersRef, (snapshot) => {
+                playersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                playersData.sort((a, b) => b.score - a.score);
+                
+                renderLeaderboard();
+                updateTopBar();
+                updateMyScoreUI();
+            }, (err) => console.error("Firebase err:", err));
+
+            // Boss Fighty
+            const bossRef = collection(db, 'artifacts', appId, 'public', 'data', 'bossFights');
+            unsubBoss = onSnapshot(bossRef, (snapshot) => {
+                bossFightData = {};
+                snapshot.docs.forEach(doc => {
+                    bossFightData[doc.id] = doc.data();
+                });
+                renderBosses();
+            }, (err) => console.error("Firebase err:", err));
+        };
+
+        const initApp = async () => {
+            lucide.createIcons();
+            renderStaticLists();
+
+            if (!auth) return; // Zastaví provedení pokud Firebase neprošlo inicializací
+
+            try {
+                await setPersistence(auth, browserLocalPersistence);
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Chyba persistence auth:", error);
+            }
+
+            onAuthStateChanged(auth, (u) => {
+                currentUser = u;
+                if (u && myPlayerName) {
+                    document.getElementById('login-screen').classList.add('hidden-view');
+                    document.getElementById('main-screen').classList.remove('hidden-view');
+                    startRealtimeListeners();
+                } else {
+                    document.getElementById('login-screen').classList.remove('hidden-view');
+                    document.getElementById('main-screen').classList.add('hidden-view');
+                }
+            });
+        };
+
+        // --- EVENT LISTENERS ---
+        document.getElementById('btn-login').addEventListener('click', async () => {
+            const nameInput = document.getElementById('player-name').value.trim();
+            const paid = document.getElementById('paid-status').checked;
+
+            if (!auth || !db) return showToast("Aplikace potřebuje nastavit Firebase v kódu!", true);
+            if (!nameInput) return showToast("Zadej svoje jméno, sráči!", true);
+            if (!paid) return showToast("Musíš zaplatit 100 Kč bankéři!", true);
+            if (!currentUser) return showToast("Načítám spojení, zkus to za vteřinu...", true);
+
+            myPlayerName = nameInput;
+            localStorage.setItem('vzp_playerName', myPlayerName);
+            
+            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+            const docSnap = await getDoc(playerDoc);
+            
+            if (docSnap.exists()) {
+                await setDoc(playerDoc, { name: myPlayerName }, { merge: true });
+            } else {
+                await setDoc(playerDoc, { name: myPlayerName, score: 0, joinedAt: Date.now() }, { merge: true });
+            }
+
+            document.getElementById('login-screen').classList.add('hidden-view');
+            document.getElementById('main-screen').classList.remove('hidden-view');
+            startRealtimeListeners();
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', async () => {
+            try {
+                if(unsubPlayers) unsubPlayers();
+                if(unsubBoss) unsubBoss();
+                if(auth) await signOut(auth);
+                localStorage.removeItem('vzp_playerName');
+                window.location.reload();
+            } catch (error) {
+                console.error("Chyba odhlášení:", error);
+            }
+        });
+
+        document.getElementById('btn-transfer').addEventListener('click', handleTransfer);
+
+        // Event Delegation for dynamic buttons
+        document.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-action]');
+            if (!btn) return;
+
+            const action = btn.getAttribute('data-action');
+            if (action === 'add-points') {
+                const pts = parseFloat(btn.getAttribute('data-pts'));
+                const msg = btn.getAttribute('data-msg');
+                handleAddPoints(pts, msg);
+            } else if (action === 'boss-fight') {
+                const id = btn.getAttribute('data-boss-id');
+                const pts = parseFloat(btn.getAttribute('data-boss-pts'));
+                const name = btn.getAttribute('data-boss-name');
+                handleBossFight(id, pts, name);
+            }
+        });
+
+        // Tab Navigation
+        const tabs = ['score', 'leaderboard', 'rules'];
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const targetTab = btn.getAttribute('data-tab');
+                
+                // Přepnutí views
+                tabs.forEach(t => {
+                    const el = document.getElementById(`tab-${t}`);
+                    if (t === targetTab) el.classList.remove('hidden-view');
+                    else el.classList.add('hidden-view');
+                });
+
+                // Aktualizace barev navigace
+                document.querySelectorAll('.nav-btn').forEach(nav => {
+                    if (nav.getAttribute('data-tab') === targetTab) {
+                        nav.classList.remove('text-slate-500', 'hover:text-slate-400');
+                        nav.classList.add('text-amber-500');
+                    } else {
+                        nav.classList.add('text-slate-500', 'hover:text-slate-400');
+                        nav.classList.remove('text-amber-500');
+                    }
+                });
+            });
+        });
+
+        // START APP
+        initApp();
+
+    </script>
+</body>
+</html>
