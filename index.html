@@ -326,6 +326,20 @@
                 </div>
 
 
+                <!-- Odkaz na hru -->
+                <div class="bg-slate-900 border border-emerald-900/60 p-6 rounded-3xl text-center">
+                    <h2 class="text-xl font-black text-slate-100 uppercase mb-2 flex items-center justify-center gap-2">
+                        <i data-lucide="qr-code" class="w-5 h-5 text-emerald-400"></i> Odkaz na hru
+                    </h2>
+                    <p class="text-slate-400 text-sm mb-4">Pošli hráčům odkaz nebo ho otevři na telefonu.</p>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 mb-3 text-emerald-300 text-xs font-bold break-all select-text">
+                        https://vestik.github.io/vesnicka_akce1/
+                    </div>
+                    <a href="https://vestik.github.io/vesnicka_akce1/" target="_blank" rel="noopener noreferrer" class="block w-full bg-emerald-900/30 hover:bg-emerald-900/50 border border-emerald-800 text-emerald-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                        Otevřít web
+                    </a>
+                </div>
+
                 <!-- Log bodů -->
                 <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
                     <h2 class="text-xl font-black text-slate-100 uppercase mb-2 flex items-center justify-center gap-2">
@@ -593,6 +607,10 @@
                     <div class="text-center text-slate-500 py-6 font-bold">Zatím nejsou žádní hráči.</div>
                 </div>
 
+                <div id="results-awards" class="relative z-10 mt-5 grid grid-cols-1 gap-3">
+                    <div class="text-center text-slate-500 py-4 font-bold">Speciální ocenění se načtou po konci soutěže.</div>
+                </div>
+
                 <div class="relative z-10 mt-5 bg-slate-950 border border-slate-800 rounded-2xl p-4">
                     <div class="flex justify-between items-center mb-2">
                         <span class="text-slate-400 font-bold uppercase text-xs">Celkový bank</span>
@@ -731,6 +749,8 @@
         let countdownInterval = null;
         let resetRedirectInProgress = false;
         let wheelRotation = 0;
+        let lastDrinkActionAt = 0;
+        const DRINK_COOLDOWN_MS = 5000;
         let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
@@ -1182,12 +1202,62 @@
             maybeAutoOpenResults();
         };
 
+        const normalizeLabelForStats = (label) => String(label || '').split(' (')[0].replace(/^Sponzoring:?\s*/i, '').trim();
+
+        const isHistoryCategory = (action, category) => {
+            if (action.category === category) return true;
+            const label = normalizeLabelForStats(action.label);
+            if (category === 'drink') {
+                return getAllDrinks().some(item => label === item.name || String(action.label || '').startsWith(`Sponzoring: ${item.name}`));
+            }
+            if (category === 'quest') {
+                return getAllQuests().some(item => label === item.name);
+            }
+            if (category === 'boss') {
+                return getAllBosses().some(item => label === `Boss Fight: ${item.name}` || label === item.name);
+            }
+            if (category === 'debuff') {
+                return getAllDebuffs().some(item => label === item.name);
+            }
+            return false;
+        };
+
+        const buildResultAwards = (sortedPlayers) => {
+            const activeHistory = actionsHistory.filter(a => !a.undone);
+            const playerName = (id, fallback) => playersData.find(p => p.id === id)?.name || fallback || 'Nikdo';
+            const aggregate = (filterFn, valueFn = a => Number(a.amount || 0)) => {
+                const map = new Map();
+                activeHistory.filter(filterFn).forEach(a => {
+                    const id = a.playerId || a.actorId || a.targetId || a.actorName || 'unknown';
+                    const name = a.playerName || a.actorName || playerName(id);
+                    const current = map.get(id) || { id, name, value: 0, count: 0 };
+                    current.value += valueFn(a);
+                    current.count += 1;
+                    map.set(id, current);
+                });
+                return [...map.values()];
+            };
+            const top = sortedPlayers[0] ? { name: sortedPlayers[0].name || 'Hráč', value: `${formatNum(Number(sortedPlayers[0].score || 0))} b.` } : null;
+            const wheelLosers = aggregate(a => a.type === 'wheel' && Number(a.amount || 0) < 0, a => Math.abs(Number(a.amount || 0))).sort((a, b) => b.value - a.value);
+            const questMasters = aggregate(a => isHistoryCategory(a, 'quest'), () => 1).sort((a, b) => b.value - a.value);
+            const drinkHeroes = aggregate(a => isHistoryCategory(a, 'drink'), a => Math.max(0, Number(a.amount || 0))).sort((a, b) => b.value - a.value);
+            const biggestLosses = aggregate(a => Number(a.amount || 0) < 0, a => Math.abs(Number(a.amount || 0))).sort((a, b) => b.value - a.value);
+            return [
+                { icon: '💰', title: 'Největší výherce', data: top, suffix: '', empty: 'Nikdo' },
+                { icon: '🎲', title: 'Největší smolař v kole', data: wheelLosers[0] ? { name: wheelLosers[0].name, value: `-${formatNum(wheelLosers[0].value)} b.` } : null, empty: 'Bez smůly' },
+                { icon: '✅', title: 'Nejvíc splněných questů', data: questMasters[0] ? { name: questMasters[0].name, value: `${formatNum(questMasters[0].value)}×` } : null, empty: 'Žádný quest' },
+                { icon: '🍻', title: 'Největší alkoholový výkon', data: drinkHeroes[0] ? { name: drinkHeroes[0].name, value: `+${formatNum(drinkHeroes[0].value)} b.` } : null, empty: 'Žádné drinky' },
+                { icon: '📉', title: 'Nejvíc ztracených bodů', data: biggestLosses[0] ? { name: biggestLosses[0].name, value: `-${formatNum(biggestLosses[0].value)} b.` } : null, empty: 'Bez ztrát' }
+            ];
+        };
+
         const renderResultsModal = () => {
             const podiumEl = document.getElementById('results-podium');
             const endedTimeEl = document.getElementById('results-ended-time');
             const totalBankEl = document.getElementById('results-total-bank');
             const prize1El = document.getElementById('results-prize-1');
             const prize2El = document.getElementById('results-prize-2');
+            const awardsEl = document.getElementById('results-awards');
             if (!podiumEl) return;
 
             const sortedPlayers = [...playersData].sort((a, b) => (Number(b.score || 0) - Number(a.score || 0)) || String(a.name || '').localeCompare(String(b.name || '')));
@@ -1206,6 +1276,7 @@
 
             if (sortedPlayers.length === 0) {
                 podiumEl.innerHTML = `<div class="text-center text-slate-500 py-6 font-bold">Zatím nejsou žádní hráči.</div>`;
+                if (awardsEl) awardsEl.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Speciální ocenění zatím nejsou dostupná.</div>`;
                 return;
             }
 
@@ -1225,13 +1296,32 @@
                     <div class="text-3xl w-12 text-center shrink-0">${meta.icon}</div>
                     <div class="min-w-0 flex-grow text-left">
                         <div class="text-[10px] font-black uppercase opacity-80">${meta.title}</div>
-                        <div class="font-black text-xl truncate text-slate-100">${p.name || 'Hráč'}</div>
+                        <div class="font-black text-xl truncate text-slate-100">${escapeHtml(p.name || 'Hráč')}</div>
                         ${prizeText}
                     </div>
                     <div class="font-black text-3xl text-white shrink-0">${formatNum(Number(p.score || 0))}</div>
                 </div>
                 `;
             }).join('');
+
+            if (awardsEl) {
+                const awards = buildResultAwards(sortedPlayers);
+                awardsEl.innerHTML = `
+                    <div class="text-center font-black uppercase tracking-widest text-slate-300 text-sm mt-1">Speciální ocenění</div>
+                    <div class="grid grid-cols-1 gap-2">
+                        ${awards.map(a => `
+                            <div class="bg-slate-950 border border-slate-800 rounded-2xl p-3 flex items-center gap-3">
+                                <div class="text-2xl w-10 text-center shrink-0">${a.icon}</div>
+                                <div class="min-w-0 flex-grow text-left">
+                                    <div class="text-[10px] text-slate-500 font-black uppercase">${a.title}</div>
+                                    <div class="font-black text-slate-100 truncate">${escapeHtml(a.data?.name || a.empty)}</div>
+                                </div>
+                                <div class="font-black text-amber-300 shrink-0">${a.data?.value || ''}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
         };
 
         const openResultsModal = (auto = false) => {
@@ -1259,6 +1349,12 @@
         const handleAddPoints = async (amount, customMsg, label = 'Bodová akce', options = {}) => {
             if (!currentUser || !db) return;
             if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Body nejdou přidávat.", true);
+            if (options.category === 'drink') {
+                const now = Date.now();
+                const remaining = DRINK_COOLDOWN_MS - (now - lastDrinkActionAt);
+                if (remaining > 0) return showToast(`Drink cooldown: počkej ještě ${Math.ceil(remaining / 1000)} s.`, true);
+                lastDrinkActionAt = now;
+            }
             const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
 
@@ -1279,6 +1375,7 @@
             await addHistoryRecord({
                 type: 'points',
                 label: multiplierNotes.length ? `${label} (${multiplierNotes.join(', ')})` : label,
+                category: options.category || 'other',
                 amount: finalAmount,
                 playerId: currentUser.uid,
                 playerName: myPlayerName || myData.name || 'Neznámý hráč'
