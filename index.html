@@ -15,6 +15,11 @@
         /* Skrytí elementů místo React stavů */
         .hidden-view { display: none !important; }
         .pb-safe { padding-bottom: env(safe-area-inset-bottom, 2rem); }
+        .happy-hour-flash { animation: happyFlash 0.8s infinite alternate; }
+        @keyframes happyFlash {
+            from { background-color: rgba(127, 29, 29, 0.95); box-shadow: 0 0 18px rgba(239, 68, 68, 0.45); }
+            to { background-color: rgba(234, 88, 12, 0.95); box-shadow: 0 0 28px rgba(251, 191, 36, 0.65); }
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans select-none overflow-x-hidden">
@@ -103,6 +108,11 @@
                     <div id="my-score-display" class="text-6xl font-black text-white tracking-tighter">0</div>
                 </div>
 
+                <div id="happy-hour-banner" class="hidden-view happy-hour-flash border border-red-400/60 p-4 rounded-3xl text-center shadow-2xl">
+                    <div class="text-2xl font-black uppercase text-white">🔥 Happy Hour běží!</div>
+                    <div id="happy-hour-text" class="text-sm font-bold text-red-50 mt-1">Drinky jsou za dvojnásobek bodů.</div>
+                </div>
+
                 <!-- Základní tankování -->
                 <div>
                     <h2 class="text-xl font-black text-slate-300 mb-3 uppercase flex items-center gap-2">
@@ -152,6 +162,20 @@
                             </button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Kolo štěstí -->
+                <div class="bg-fuchsia-950/30 border border-fuchsia-900/50 p-5 rounded-3xl">
+                    <h2 class="text-xl font-black text-fuchsia-400 mb-3 uppercase flex items-center gap-2">
+                        <i data-lucide="dices" class="w-5 h-5"></i> Kolo štěstí / Ruská ruleta
+                    </h2>
+                    <p class="text-sm text-fuchsia-200/80 mb-4 font-medium">
+                        Zaplatíš 25 bodů a systém ti náhodně hodí dobrou nebo špatnou věc. Šance je 50/50.
+                    </p>
+                    <button id="btn-spin-wheel" class="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-black py-4 rounded-xl uppercase active:scale-95 transition-transform shadow-lg shadow-fuchsia-900/20">
+                        Zatočit za 25 bodů
+                    </button>
+                    <div id="wheel-result" class="hidden-view mt-4 bg-slate-950 border border-fuchsia-800 rounded-2xl p-4 text-center font-bold"></div>
                 </div>
 
                 <!-- Debuffy -->
@@ -308,6 +332,20 @@
                         </button>
                     </div>
 
+                    <div class="bg-slate-950 border border-red-900/60 rounded-2xl p-4">
+                        <h3 class="font-black uppercase text-red-200 mb-3 flex items-center gap-2"><i data-lucide="flame" class="w-5 h-5"></i> Happy Hour</h3>
+                        <p id="happy-hour-admin-label" class="text-xs text-slate-400 mb-3">Happy Hour neběží.</p>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <input type="number" id="happy-hour-minutes" value="15" min="1" step="1" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-red-500" placeholder="Minuty">
+                            <button id="btn-admin-start-happy-hour" class="bg-red-600/20 hover:bg-red-600/30 border border-red-600/60 text-red-200 font-black py-3 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                                Spustit
+                            </button>
+                        </div>
+                        <button id="btn-admin-stop-happy-hour" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold py-3 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                            Vypnout Happy Hour
+                        </button>
+                    </div>
+
                     <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
                         <h3 class="font-black uppercase text-slate-200 mb-3">Editor úkolů a bodů</h3>
                         <p class="text-xs text-slate-500 mb-3 leading-relaxed">Přidej vlastní položku do vybrané kategorie. Nové základní tankování se automaticky objeví i ve sponzoringu s násobkem × 1.5.</p>
@@ -326,7 +364,12 @@
                         </button>
 
                         <div class="mt-5 pt-4 border-t border-slate-800">
-                            <h4 class="font-black uppercase text-slate-300 mb-3 text-sm">Vlastní přidané položky</h4>
+                            <div class="flex items-center justify-between gap-2 mb-3">
+                                <h4 class="font-black uppercase text-slate-300 text-sm">Všechny položky</h4>
+                                <button id="btn-admin-restore-default-items" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase shrink-0">
+                                    Obnovit výchozí
+                                </button>
+                            </div>
                             <div id="custom-items-container" class="space-y-2">
                                 <div class="text-center text-slate-500 py-4 font-bold">Zatím žádné vlastní položky.</div>
                             </div>
@@ -459,22 +502,22 @@
         ];
 
         const quests = [
-            { name: 'Sníst klobásu/maso', pts: 20 },
-            { name: 'Sníst to přesně o půlnoci', pts: 40 },
-            { name: 'Tancovat na sérii min. 3 písniček', pts: 25 },
-            { name: 'Vyzvat k tanci někoho neznámého', pts: 50 },
-            { name: 'Nechat si koupit panák od někoho mimo partu', pts: 45 },
-            { name: 'Pivo podepsané od barmana', pts: 20 },
-            { name: 'Písnička na přání u kapely', pts: 40 },
-            { name: 'Být úplně první na parketu u nové série', pts: 30 },
-            { name: 'Stojka na parketu', pts: 40 },
-            { name: 'Kotrmelec', pts: 20 },
-            { name: 'Připít si se štamgasty', pts: 30 },
-            { name: 'Pronést láhev do areálu', pts: 100 },
-            { name: 'Za každý panák z vlastní láhve', pts: 10 },
-            { name: 'Rozjet vláček (min. 5 cizích lidí)', pts: 100 },
-            { name: 'Epické sólo na vzdušnou kytaru pod pódiem', pts: 25 },
-            { name: 'Společná fotka s pořadatelem', pts: 45 }
+            { id: 'klobasa_maso', name: 'Sníst klobásu/maso', pts: 20 },
+            { id: 'pulnoc_jidlo', name: 'Sníst to přesně o půlnoci', pts: 40 },
+            { id: 'tanec_3_pisne', name: 'Tancovat na sérii min. 3 písniček', pts: 25 },
+            { id: 'tanec_neznamy', name: 'Vyzvat k tanci někoho neznámého', pts: 50 },
+            { id: 'panak_mimo_partu', name: 'Nechat si koupit panák od někoho mimo partu', pts: 45 },
+            { id: 'podpis_barman', name: 'Pivo podepsané od barmana', pts: 20 },
+            { id: 'pisnicka_na_prani', name: 'Písnička na přání u kapely', pts: 40 },
+            { id: 'prvni_na_parketu', name: 'Být úplně první na parketu u nové série', pts: 30 },
+            { id: 'stojka', name: 'Stojka na parketu', pts: 40 },
+            { id: 'kotrmelec', name: 'Kotrmelec', pts: 20 },
+            { id: 'stamgasti', name: 'Připít si se štamgasty', pts: 30 },
+            { id: 'pronest_lahev', name: 'Pronést láhev do areálu', pts: 100 },
+            { id: 'panak_vlastni_lahev', name: 'Za každý panák z vlastní láhve', pts: 10 },
+            { id: 'vlacek', name: 'Rozjet vláček (min. 5 cizích lidí)', pts: 100 },
+            { id: 'air_guitar', name: 'Epické sólo na vzdušnou kytaru pod pódiem', pts: 25 },
+            { id: 'fotka_poradatel', name: 'Společná fotka s pořadatelem', pts: 45 }
         ];
 
         const bosses = [
@@ -485,10 +528,10 @@
         ];
 
         const debuffs = [
-            { name: 'Rozlití vlastního pití', pts: -15 },
-            { name: 'Rozlití cizího pití (a platíš nové)', pts: -40 },
-            { name: 'Stěžování si na hudbu', pts: -5 },
-            { name: 'Zabavená láhev u vstupu', pts: -50 }
+            { id: 'rozliti_vlastni', name: 'Rozlití vlastního pití', pts: -15 },
+            { id: 'rozliti_cizi', name: 'Rozlití cizího pití (a platíš nové)', pts: -40 },
+            { id: 'stezovani_hudba', name: 'Stěžování si na hudbu', pts: -5 },
+            { id: 'zabavena_lahev', name: 'Zabavená láhev u vstupu', pts: -50 }
         ];
 
         // --- STAV APLIKACE ---
@@ -504,7 +547,7 @@
         let unsubCustomItems = null;
         let actionsHistory = [];
         let customItems = [];
-        let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null };
+        let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {} };
         let countdownInterval = null;
         let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
@@ -535,11 +578,22 @@
             return labels[category] || category || 'Kategorie';
         };
 
+        const slugify = (value) => String(value || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_+|_+$/g, '') || 'polozka';
+
+        const defaultItemKey = (category, item) => `${category}:${item.id || slugify(item.name)}`;
+        const isDefaultItemHidden = (category, item) => !!(gameState.disabledDefaultItems || {})[defaultItemKey(category, item)];
+        const getVisibleDefaultItems = (category, items) => items.filter(item => !isDefaultItemHidden(category, item));
         const getItemsByCategory = (category) => customItems.filter(item => item.category === category);
-        const getAllDrinks = () => [...baseDrinks, ...getItemsByCategory('drink')];
-        const getAllQuests = () => [...quests, ...getItemsByCategory('quest')];
-        const getAllBosses = () => [...bosses, ...getItemsByCategory('boss')];
-        const getAllDebuffs = () => [...debuffs, ...getItemsByCategory('debuff')];
+        const getAllDrinks = () => [...getVisibleDefaultItems('drink', baseDrinks), ...getItemsByCategory('drink')];
+        const getAllQuests = () => [...getVisibleDefaultItems('quest', quests), ...getItemsByCategory('quest')];
+        const getAllBosses = () => [...getVisibleDefaultItems('boss', bosses), ...getItemsByCategory('boss')];
+        const getAllDebuffs = () => [...getVisibleDefaultItems('debuff', debuffs), ...getItemsByCategory('debuff')];
+        const isHappyHourActive = () => !!gameState.happyHourUntil && Number(gameState.happyHourUntil) > Date.now() && !gameState.competitionEnded;
 
         const showToast = (msg, isError = false) => {
             const toastEl = document.getElementById('toast');
@@ -588,6 +642,7 @@
             }
             renderAdminPlayersSelect();
             renderCompetitionState();
+            updateHappyHourUI();
             lucide.createIcons();
         };
 
@@ -686,6 +741,28 @@
             return target.getTime();
         };
 
+        const updateHappyHourUI = () => {
+            const active = isHappyHourActive();
+            const banner = document.getElementById('happy-hour-banner');
+            const text = document.getElementById('happy-hour-text');
+            const countdownBar = document.getElementById('countdown-bar');
+            const adminLabel = document.getElementById('happy-hour-admin-label');
+
+            if (banner) banner.classList.toggle('hidden-view', !active);
+            if (countdownBar) countdownBar.classList.toggle('happy-hour-flash', active);
+
+            const remaining = active ? Math.max(0, Number(gameState.happyHourUntil) - Date.now()) : 0;
+            const mins = Math.floor(remaining / 60000);
+            const secs = Math.floor((remaining % 60000) / 1000);
+            const remainingText = `${mins}:${String(secs).padStart(2, '0')}`;
+
+            if (text) text.innerText = active ? `Drinky jsou za dvojnásobek bodů. Zbývá ${remainingText}.` : 'Drinky jsou za dvojnásobek bodů.';
+            if (adminLabel) {
+                adminLabel.innerText = active ? `Happy Hour běží. Zbývá ${remainingText}.` : 'Happy Hour neběží.';
+                adminLabel.className = active ? 'text-xs text-red-300 mb-3 font-bold' : 'text-xs text-slate-400 mb-3';
+            }
+        };
+
         const renderLockedTasks = () => {
             const container = document.getElementById('locked-tasks-container');
             if (!container) return;
@@ -715,28 +792,48 @@
             const container = document.getElementById('custom-items-container');
             if (!container) return;
 
-            if (customItems.length === 0) {
-                container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Zatím žádné vlastní položky.</div>`;
-                return;
-            }
+            const defaultGroups = [
+                { category: 'drink', items: baseDrinks },
+                { category: 'quest', items: quests },
+                { category: 'boss', items: bosses },
+                { category: 'debuff', items: debuffs }
+            ];
 
-            const sorted = [...customItems].sort((a, b) => {
+            const rows = [];
+            defaultGroups.forEach(group => {
+                group.items.forEach(item => {
+                    const hidden = isDefaultItemHidden(group.category, item);
+                    rows.push({ ...item, category: group.category, source: 'default', hidden, key: defaultItemKey(group.category, item) });
+                });
+            });
+            customItems.forEach(item => rows.push({ ...item, source: 'custom', hidden: false, key: item.id }));
+
+            rows.sort((a, b) => {
                 const cat = getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category), 'cs');
                 if (cat !== 0) return cat;
+                if (a.hidden !== b.hidden) return a.hidden ? 1 : -1;
                 return String(a.name || '').localeCompare(String(b.name || ''), 'cs');
             });
 
-            container.innerHTML = sorted.map(item => {
+            if (rows.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Zatím žádné položky.</div>`;
+                return;
+            }
+
+            container.innerHTML = rows.map(item => {
                 const isNegative = Number(item.pts || 0) < 0;
+                const badge = item.source === 'default' ? 'Výchozí' : 'Vlastní';
+                const hiddenText = item.hidden ? ' • smazáno/skryto' : '';
+                const button = item.source === 'default'
+                    ? `<button data-action="delete-default-item" data-category="${item.category}" data-item-id="${item.id || slugify(item.name)}" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase shrink-0 ${item.hidden ? 'opacity-40 cursor-not-allowed' : ''}" ${item.hidden ? 'disabled' : ''}>Smazat</button>`
+                    : `<button data-action="delete-custom-item" data-item-id="${item.id}" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase shrink-0">Smazat</button>`;
                 return `
-                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-3">
+                <div class="bg-slate-900 border ${item.hidden ? 'border-rose-900/50 opacity-60' : 'border-slate-800'} rounded-2xl p-3 flex items-center justify-between gap-3">
                     <div class="min-w-0">
                         <div class="font-bold text-slate-100 leading-tight truncate">${escapeHtml(item.name)}</div>
-                        <div class="text-xs text-slate-500 mt-1">${escapeHtml(getCategoryLabel(item.category))} • <span class="${isNegative ? 'text-rose-400' : 'text-emerald-400'} font-bold">${isNegative ? '' : '+'}${formatNum(item.pts || 0)} b.</span></div>
+                        <div class="text-xs text-slate-500 mt-1">${escapeHtml(getCategoryLabel(item.category))} • ${badge}${hiddenText} • <span class="${isNegative ? 'text-rose-400' : 'text-emerald-400'} font-bold">${isNegative ? '' : '+'}${formatNum(item.pts || 0)} b.</span></div>
                     </div>
-                    <button data-action="delete-custom-item" data-item-id="${item.id}" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase shrink-0">
-                        Smazat
-                    </button>
+                    ${button}
                 </div>
                 `;
             }).join('');
@@ -782,7 +879,7 @@
 
             // Drinks
             document.getElementById('drinks-container').innerHTML = allDrinks.map(drink => `
-                <button data-action="add-points" data-pts="${drink.pts}" data-label="${escapeHtml(drink.name)}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
+                <button data-action="add-points" data-category="drink" data-pts="${drink.pts}" data-label="${escapeHtml(drink.name)}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
                     <span class="font-bold text-center leading-tight pointer-events-none">${escapeHtml(drink.name)}</span>
                     <span class="text-emerald-400 font-black text-lg pointer-events-none">+${formatNum(drink.pts)}</span>
                 </button>
@@ -792,7 +889,7 @@
             document.getElementById('sponsorship-container').innerHTML = allDrinks.map(drink => {
                 const sponPts = Number(drink.pts) * 1.5;
                 return `
-                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" data-label="Sponzoring: ${escapeHtml(drink.name)}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
+                <button data-action="add-points" data-category="drink" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" data-label="Sponzoring: ${escapeHtml(drink.name)}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
                     <span class="font-bold text-xs text-center text-indigo-200 pointer-events-none">${escapeHtml(drink.name)}</span>
                     <span class="text-indigo-400 font-black pointer-events-none">+${formatNum(sponPts)}</span>
                 </button>
@@ -801,7 +898,7 @@
 
             // Quests
             document.getElementById('quests-container').innerHTML = allQuests.map(q => `
-                <button data-action="add-points" data-pts="${q.pts}" data-label="${escapeHtml(q.name)}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
+                <button data-action="add-points" data-category="quest" data-pts="${q.pts}" data-label="${escapeHtml(q.name)}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
                     <span class="font-bold pr-4 leading-tight text-slate-200 pointer-events-none">${escapeHtml(q.name)}</span>
                     <span class="text-blue-400 font-black whitespace-nowrap bg-blue-400/10 px-3 py-1 rounded-lg pointer-events-none">+${formatNum(q.pts)}</span>
                 </button>
@@ -809,7 +906,7 @@
 
             // Debuffs
             document.getElementById('debuffs-container').innerHTML = allDebuffs.map(d => `
-                <button data-action="add-points" data-pts="${d.pts}" data-label="${escapeHtml(d.name)}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
+                <button data-action="add-points" data-category="debuff" data-pts="${d.pts}" data-label="${escapeHtml(d.name)}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
                     <span class="font-bold pr-4 leading-tight text-rose-100 pointer-events-none">${escapeHtml(d.name)}</span>
                     <span class="text-rose-400 font-black whitespace-nowrap bg-rose-950/50 px-3 py-1 rounded-lg pointer-events-none">${formatNum(d.pts)}</span>
                 </button>
@@ -972,23 +1069,37 @@
         };
 
         // --- AKCE A LOGIKA ---
-        const handleAddPoints = async (amount, customMsg, label = 'Bodová akce') => {
+        const handleAddPoints = async (amount, customMsg, label = 'Bodová akce', options = {}) => {
             if (!currentUser || !db) return;
             if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Body nejdou přidávat.", true);
             const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
-            
-            await updateDoc(playerDoc, { score: myData.score + amount });
+
+            let finalAmount = Number(amount || 0);
+            const multiplierNotes = [];
+            if (options.category === 'drink' && isHappyHourActive() && finalAmount > 0) {
+                finalAmount *= 2;
+                multiplierNotes.push('Happy Hour ×2');
+            }
+            if (myData.wheelNextDouble && finalAmount > 0) {
+                finalAmount *= 2;
+                multiplierNotes.push('Kolo štěstí ×2');
+            }
+
+            const updatePayload = { score: Number(myData.score || 0) + finalAmount };
+            if (myData.wheelNextDouble && Number(amount || 0) > 0) updatePayload.wheelNextDouble = false;
+            await updateDoc(playerDoc, updatePayload);
             await addHistoryRecord({
                 type: 'points',
-                label,
-                amount,
+                label: multiplierNotes.length ? `${label} (${multiplierNotes.join(', ')})` : label,
+                amount: finalAmount,
                 playerId: currentUser.uid,
                 playerName: myPlayerName || myData.name || 'Neznámý hráč'
             });
-            
-            const prefix = amount > 0 ? '+' : '';
-            showToast(customMsg || `${prefix}${formatNum(amount)} bodů!`);
+
+            const prefix = finalAmount > 0 ? '+' : '';
+            const msg = multiplierNotes.length ? `${prefix}${formatNum(finalAmount)} bodů! ${multiplierNotes.join(' + ')}` : (customMsg || `${prefix}${formatNum(finalAmount)} bodů!`);
+            showToast(msg);
         };
 
         const handleBossFight = async (bossId, bossPts, bossName) => {
@@ -1078,6 +1189,101 @@
 
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customItems', itemId));
             showToast("Položka smazána.");
+        };
+
+        const handleAdminDeleteDefaultItem = async (category, itemId) => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db || !category || !itemId) return;
+
+            const collections = { drink: baseDrinks, quest: quests, boss: bosses, debuff: debuffs };
+            const item = (collections[category] || []).find(i => (i.id || slugify(i.name)) === itemId);
+            if (!item) return showToast("Výchozí položka nenalezena.", true);
+            const sure = confirm(`Opravdu smazat/skryt výchozí položku „${item.name}“? Půjde obnovit tlačítkem Obnovit výchozí.`);
+            if (!sure) return;
+
+            const disabledDefaultItems = { ...(gameState.disabledDefaultItems || {}), [defaultItemKey(category, item)]: true };
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), { disabledDefaultItems }, { merge: true });
+            showToast("Výchozí položka skryta.");
+        };
+
+        const handleAdminRestoreDefaultItems = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            const sure = confirm('Obnovit všechny smazané výchozí položky? Vlastní přidané položky zůstanou.');
+            if (!sure) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), { disabledDefaultItems: {} }, { merge: true });
+            showToast("Výchozí položky obnoveny.");
+        };
+
+        const handleAdminStartHappyHour = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená.", true);
+            const minutes = parseInt(document.getElementById('happy-hour-minutes').value, 10);
+            if (!Number.isFinite(minutes) || minutes <= 0) return showToast("Zadej počet minut.", true);
+            const happyHourUntil = Date.now() + minutes * 60 * 1000;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+                happyHourUntil,
+                happyHourStartedAt: Date.now(),
+                happyHourStartedBy: currentUser?.uid || 'admin'
+            }, { merge: true });
+            showToast(`Happy Hour spuštěna na ${minutes} min.`);
+        };
+
+        const handleAdminStopHappyHour = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), { happyHourUntil: null }, { merge: true });
+            showToast("Happy Hour vypnuta.");
+        };
+
+        const handleWheelSpin = async () => {
+            if (!currentUser || !db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Kolo štěstí je vypnuté.", true);
+
+            const cost = 25;
+            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
+            if (Number(myData.score || 0) < cost) return showToast("Na zatočení potřebuješ aspoň 25 bodů.", true);
+
+            const goodOutcomes = [
+                { title: '+100 bodů', delta: 100, text: 'Jackpot! Přičítá se ti +100 bodů.' },
+                { title: '+75 bodů', delta: 75, text: 'Hezká trefa! Přičítá se ti +75 bodů.' },
+                { title: '+50 bodů', delta: 50, text: 'Dobrá ruleta! Přičítá se ti +50 bodů.' },
+                { title: 'Další body ×2', delta: 0, nextDouble: true, text: 'Tvoje další kladná bodová akce se zdvojnásobí.' },
+                { title: 'Vrácený vklad + bonus', delta: 50, text: 'Vklad se ti vrátil a ještě bereš bonus.' }
+            ];
+            const badOutcomes = [
+                { title: '-50 bodů navíc', delta: -50, text: 'Smůla. Kromě vkladu ztrácíš dalších 50 bodů.' },
+                { title: '-25 bodů navíc', delta: -25, text: 'Ruleta tě kousla. Kromě vkladu ztrácíš dalších 25 bodů.' },
+                { title: 'Kup panáka adminovi', delta: 0, text: 'Body za vklad jsou pryč a úkol je jasný: panák adminovi.' },
+                { title: 'Sklenice vody', delta: 0, text: 'Body za vklad jsou pryč. Musíš vypít sklenici vody.' },
+                { title: 'Veřejná ostuda', delta: -10, text: 'Body za vklad jsou pryč a navíc -10 za ostudu.' }
+            ];
+
+            const isGood = Math.random() < 0.5;
+            const pool = isGood ? goodOutcomes : badOutcomes;
+            const outcome = pool[Math.floor(Math.random() * pool.length)];
+            const netAmount = -cost + Number(outcome.delta || 0);
+            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+            const payload = { score: Number(myData.score || 0) + netAmount };
+            if (outcome.nextDouble) payload.wheelNextDouble = true;
+            await updateDoc(playerDoc, payload);
+
+            await addHistoryRecord({
+                type: 'wheel',
+                label: `Kolo štěstí: ${outcome.title}`,
+                amount: netAmount,
+                playerId: currentUser.uid,
+                playerName: myPlayerName || myData.name || 'Neznámý hráč'
+            });
+
+            const resultBox = document.getElementById('wheel-result');
+            if (resultBox) {
+                resultBox.classList.remove('hidden-view');
+                resultBox.className = `mt-4 border rounded-2xl p-4 text-center font-bold ${isGood ? 'bg-emerald-950/50 border-emerald-700 text-emerald-200' : 'bg-rose-950/50 border-rose-700 text-rose-200'}`;
+                resultBox.innerHTML = `<div class="text-xs uppercase tracking-widest mb-1">${isGood ? 'Dobrá věc' : 'Špatná věc'}</div><div class="text-xl font-black">${escapeHtml(outcome.title)}</div><div class="text-sm mt-1">${escapeHtml(outcome.text)}</div><div class="text-xs mt-2 text-slate-300">Celkový dopad včetně vkladu: ${netAmount >= 0 ? '+' : ''}${formatNum(netAmount)} b.</div>`;
+            }
+            showToast(`${isGood ? 'Štěstí!' : 'Smůla!'} ${outcome.title}` , !isGood);
         };
 
         const handleAdminDeductPoints = async () => {
@@ -1278,7 +1484,7 @@
             // Stav soutěže
             const gameStateDoc = doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main');
             unsubGameState = onSnapshot(gameStateDoc, (snapshot) => {
-                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, scheduledEndAt: null, ...snapshot.data() } : { competitionEnded: false, endedAt: null, scheduledEndAt: null };
+                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {}, ...snapshot.data() } : { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {} };
                 renderCompetitionState();
                 renderResultsModal();
                 maybeAutoOpenResults();
@@ -1393,7 +1599,8 @@
                 const pts = parseFloat(btn.getAttribute('data-pts'));
                 const msg = btn.getAttribute('data-msg');
                 const label = btn.getAttribute('data-label') || 'Bodová akce';
-                handleAddPoints(pts, msg, label);
+                const category = btn.getAttribute('data-category') || '';
+                handleAddPoints(pts, msg, label, { category });
             } else if (action === 'boss-fight') {
                 const id = btn.getAttribute('data-boss-id');
                 const pts = parseFloat(btn.getAttribute('data-boss-pts'));
@@ -1405,6 +1612,10 @@
             } else if (action === 'delete-custom-item') {
                 const id = btn.getAttribute('data-item-id');
                 handleAdminDeleteCustomItem(id);
+            } else if (action === 'delete-default-item') {
+                const id = btn.getAttribute('data-item-id');
+                const category = btn.getAttribute('data-category');
+                handleAdminDeleteDefaultItem(category, id);
             }
         });
 
@@ -1429,6 +1640,10 @@
 
         document.getElementById('btn-admin-deduct-points').addEventListener('click', handleAdminDeductPoints);
         document.getElementById('btn-admin-add-custom-item').addEventListener('click', handleAdminAddCustomItem);
+        document.getElementById('btn-admin-restore-default-items').addEventListener('click', handleAdminRestoreDefaultItems);
+        document.getElementById('btn-admin-start-happy-hour').addEventListener('click', handleAdminStartHappyHour);
+        document.getElementById('btn-admin-stop-happy-hour').addEventListener('click', handleAdminStopHappyHour);
+        document.getElementById('btn-spin-wheel').addEventListener('click', handleWheelSpin);
         document.getElementById('btn-admin-set-end-time').addEventListener('click', handleAdminSetEndTime);
         document.getElementById('btn-admin-end-now').addEventListener('click', handleAdminEndNow);
         document.getElementById('btn-admin-reset-tasks').addEventListener('click', handleAdminResetTasks);
