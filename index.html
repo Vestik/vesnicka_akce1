@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Vesnická Zábava RPG</title>
+    <title>Project Veste</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -97,27 +97,87 @@
     </div>
 
     <!-- LOGIN SCREEN (Viditelné by default) -->
-    <div id="login-screen" class="min-h-screen flex flex-col justify-center items-center p-6">
-        <div class="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-[0_0_40px_rgba(0,0,0,0.5)]">
-            <div class="text-center mb-8">
-                <i data-lucide="swords" class="w-16 h-16 mx-auto mb-4 text-amber-500"></i>
-                <h1 class="text-3xl font-black uppercase tracking-widest text-amber-500 mb-2">Vesnická Zábava RPG</h1>
-                <p class="text-slate-400">Přežij noc. Vyhraj bank.</p>
+    <div id="login-screen" class="min-h-screen flex flex-col justify-center items-center p-4 py-8">
+        <div class="max-w-md w-full bg-slate-900 border border-amber-500/20 p-6 rounded-3xl shadow-[0_0_50px_rgba(245,158,11,0.12)] relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-20 w-52 h-52 bg-purple-600/10 rounded-full blur-3xl"></div>
+
+            <div class="relative text-center mb-7">
+                <div class="mx-auto mb-4 w-20 h-20 rounded-3xl bg-slate-950 border border-amber-500/30 flex items-center justify-center shadow-[0_0_25px_rgba(245,158,11,0.18)]">
+                    <i data-lucide="swords" class="w-12 h-12 text-amber-500"></i>
+                </div>
+                <div class="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-400 text-[10px] font-black uppercase tracking-[0.25em] px-3 py-1 rounded-full mb-3">
+                    Live party game
+                </div>
+                <h1 class="text-4xl font-black uppercase tracking-widest text-amber-500 leading-none mb-2">Project Veste</h1>
+                <p class="text-xs font-bold uppercase tracking-[0.25em] text-slate-500 mb-4">made by Smejky</p>
+                <p class="text-slate-300 text-sm leading-relaxed max-w-xs mx-auto">
+                    Party RPG soutěž o body, questy, boss fighty, hazard a celkový bank. Sbírej body, riskuj a skonči večer jako legenda.
+                </p>
             </div>
 
-            <div class="space-y-6">
+
+            <button id="btn-howto" class="relative w-full bg-slate-950 hover:bg-slate-800 border border-blue-500/40 text-blue-300 font-black py-4 rounded-2xl uppercase tracking-wider active:scale-95 transition-transform mb-5 flex items-center justify-center gap-2">
+                <i data-lucide="help-circle" class="w-5 h-5"></i>
+                Jak na to?
+            </button>
+
+            <div class="relative space-y-5">
                 <div>
-                    <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">Tvoje Jméno / Přezdívka</label>
+                    <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">Tvoje jméno / přezdívka</label>
                     <input type="text" id="player-name" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors" placeholder="Např. Lojza">
                 </div>
 
-                <label class="flex items-center space-x-4 bg-slate-950 p-4 rounded-xl border border-slate-800 cursor-pointer">
-                    <input type="checkbox" id="paid-status" class="w-8 h-8 rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-700">
-                    <span class="font-bold text-lg select-none">Odevzdal jsem 100 Kč bankéři</span>
-                </label>
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-4 bg-slate-950 p-4 rounded-xl border border-slate-800 cursor-pointer">
+                        <input type="checkbox" id="read-howto-status" class="w-8 h-8 rounded text-blue-500 focus:ring-blue-500 bg-slate-900 border-slate-700">
+                        <span class="font-bold text-base select-none">Četl jsem „Jak na to“</span>
+                    </label>
+
+                    <label class="flex items-center space-x-4 bg-slate-950 p-4 rounded-xl border border-slate-800 cursor-pointer">
+                        <input type="checkbox" id="paid-status" class="w-8 h-8 rounded text-amber-500 focus:ring-amber-500 bg-slate-900 border-slate-700">
+                        <span class="font-bold text-base select-none">Dal jsem 100 Kč do banku</span>
+                    </label>
+                </div>
 
                 <button id="btn-login" class="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 font-black text-2xl py-5 rounded-xl uppercase tracking-wider transition-transform active:scale-95 shadow-lg shadow-amber-900/20 mt-4">
                     Vstoupit do hry
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- HOW TO MODAL -->
+    <div id="howto-modal" class="hidden-view fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+        <div class="max-w-md mx-auto min-h-full flex items-center justify-center">
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 relative">
+                <button id="btn-close-howto" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-2 active:scale-95">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+
+                <div class="pr-10 mb-5">
+                    <h2 class="text-3xl font-black text-amber-500 uppercase tracking-wider">Jak na to?</h2>
+                    <p class="text-slate-400 text-sm mt-1">Rychlý návod k Project Veste.</p>
+                </div>
+
+                <div class="space-y-3 text-sm text-slate-300 leading-relaxed">
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-amber-400">1. Zaplať 100 Kč do banku.</strong><br>Bez zaplacení se do hry nevstupuje. Z banku se na konci vyplácí 1. a 2. místo.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-amber-400">2. Přihlas se přezdívkou.</strong><br>Pod tímhle jménem tě ostatní uvidí v žebříčku.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-amber-400">3. Sbírej body.</strong><br>Body získáváš za drinky, side questy, boss fighty, sponzoring a další akce ve hře.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-rose-400">4. Pozor na mínusy.</strong><br>Za průsery a špatné výsledky v kole štěstí můžeš body ztratit.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-amber-400">5. Boss fighty jsou globální.</strong><br>Kdo boss fight splní první, zamkne ho pro všechny ostatní.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-rose-400">6. Happy Hour.</strong><br>Když ji admin spustí, všem se zobrazí upozornění a drinky dávají dvojnásobek bodů.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-purple-300">7. Kolo štěstí.</strong><br>Můžeš riskovat body. Výsledek je 50/50: dobrá nebo špatná věc.</div>
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4"><strong class="text-emerald-400">8. Konec soutěže.</strong><br>Po konci se zamknou body a zobrazí se vyhlášení vítězů.</div>
+                </div>
+
+                <div class="mt-5 bg-rose-950/40 border border-rose-800 rounded-2xl p-4 text-sm text-rose-100 leading-relaxed">
+                    <h3 class="font-black uppercase text-rose-300 mb-2">Pravidla</h3>
+                    <p>Klikej jen věci, které se opravdu staly. Nepodváděj. Admin má poslední slovo. Hraješ na vlastní zodpovědnost. Kdo nezaplatil 100 Kč, nehraje o výhru.</p>
+                </div>
+
+                <button id="btn-howto-confirm" class="w-full mt-5 bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl uppercase active:scale-95 transition-transform">
+                    Rozumím, jdu hrát
                 </button>
             </div>
         </div>
@@ -1748,11 +1808,13 @@
         // --- EVENT LISTENERS ---
         document.getElementById('btn-login').addEventListener('click', async () => {
             const nameInput = document.getElementById('player-name').value.trim();
+            const readHowto = document.getElementById('read-howto-status').checked;
             const paid = document.getElementById('paid-status').checked;
 
             if (!auth || !db) return showToast("Aplikace potřebuje nastavit Firebase v kódu!", true);
-            if (!nameInput) return showToast("Zadej svoje jméno, sráči!", true);
-            if (!paid) return showToast("Musíš zaplatit 100 Kč bankéři!", true);
+            if (!nameInput) return showToast("Zadej svoje jméno / přezdívku.", true);
+            if (!readHowto) return showToast("Nejdřív potvrď, že jsi četl 'Jak na to'.", true);
+            if (!paid) return showToast("Nejdřív potvrď, že jsi dal 100 Kč do banku.", true);
             if (!currentUser) return showToast("Načítám spojení, zkus to za vteřinu...", true);
 
             myPlayerName = nameInput;
@@ -1819,6 +1881,21 @@
         document.getElementById('btn-results-leaderboard').addEventListener('click', () => {
             document.getElementById('results-modal').classList.add('hidden-view');
             document.querySelector('button[data-tab="leaderboard"]')?.click();
+        });
+
+        document.getElementById('btn-howto').addEventListener('click', () => {
+            document.getElementById('howto-modal').classList.remove('hidden-view');
+            lucide.createIcons();
+        });
+
+        document.getElementById('btn-close-howto').addEventListener('click', () => {
+            document.getElementById('howto-modal').classList.add('hidden-view');
+        });
+
+        document.getElementById('btn-howto-confirm').addEventListener('click', () => {
+            document.getElementById('read-howto-status').checked = true;
+            document.getElementById('howto-modal').classList.add('hidden-view');
+            showToast('Jak na to přečteno. Teď už jen jméno a bank.');
         });
 
         document.getElementById('btn-transfer').addEventListener('click', handleTransfer);
