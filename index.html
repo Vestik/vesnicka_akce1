@@ -52,10 +52,24 @@
     </div>
 
     <!-- MAIN APP SCREEN -->
-    <div id="main-screen" class="hidden-view pb-28 pt-20">
+    <div id="main-screen" class="hidden-view pb-28 pt-32">
         
+        <!-- Countdown Bar -->
+        <div id="countdown-bar" class="fixed top-0 left-0 w-full bg-slate-950 border-b border-slate-800 z-40 px-3 py-2 shadow-md">
+            <div class="max-w-md mx-auto flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-w-0">
+                    <i data-lucide="timer" class="w-5 h-5 text-amber-500 shrink-0"></i>
+                    <div class="min-w-0">
+                        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Konec soutěže</div>
+                        <div id="countdown-text" class="text-sm font-black text-slate-100 truncate">Nenastaveno</div>
+                    </div>
+                </div>
+                <div id="countdown-status" class="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Běží</div>
+            </div>
+        </div>
+
         <!-- Top Bar (Bank Info) -->
-        <div class="fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-40 px-3 py-3 shadow-md">
+        <div class="fixed top-12 left-0 w-full bg-slate-900 border-b border-slate-800 z-40 px-3 py-3 shadow-md">
             <div class="grid grid-cols-4 gap-2 items-center max-w-md mx-auto">
                 <div class="text-center bg-slate-950/60 border border-slate-800 px-2 py-1 rounded-xl">
                     <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bank</div>
@@ -277,15 +291,39 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 gap-3">
-                        <button id="btn-admin-end-competition" class="w-full bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/60 text-amber-300 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
-                            Nastavit konec soutěže
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                        <h3 class="font-black uppercase text-slate-200 mb-3">Konec soutěže</h3>
+                        <label class="block text-xs text-slate-400 font-bold uppercase mb-2">Vyber čas konce</label>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <input type="time" id="admin-end-time" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                            <button id="btn-admin-set-end-time" class="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/60 text-amber-300 font-black py-3 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                                Nastavit čas
+                            </button>
+                        </div>
+                        <button id="btn-admin-end-now" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Ukončit soutěž předčasně
                         </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3">
                         <button id="btn-admin-reset-tasks" class="w-full bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
                             Vyresetovat úkoly / boss fighty
                         </button>
                         <button id="btn-admin-delete-players" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
                             Vymazat všechny účty a body
+                        </button>
+                    </div>
+
+                    <div id="admin-reset-tasks-box" class="hidden-view bg-slate-950 border border-blue-900/60 rounded-2xl p-4">
+                        <div class="flex items-center justify-between gap-3 mb-3">
+                            <h3 class="font-black uppercase text-blue-200">Zamčené úkoly</h3>
+                            <button id="btn-close-reset-tasks-box" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase">Zavřít</button>
+                        </div>
+                        <div id="locked-tasks-container" class="space-y-3">
+                            <div class="text-center text-slate-500 py-4 font-bold">Žádné zamčené úkoly.</div>
+                        </div>
+                        <button id="btn-admin-unlock-all-tasks" class="w-full mt-3 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Obnovit všechny zamčené
                         </button>
                     </div>
                     <p class="text-xs text-slate-500 leading-relaxed">
@@ -393,7 +431,8 @@
         let unsubHistory = null;
         let unsubGameState = null;
         let actionsHistory = [];
-        let gameState = { competitionEnded: false, endedAt: null };
+        let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null };
+        let countdownInterval = null;
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
         // --- NÁSTROJE ---
@@ -465,23 +504,107 @@
 
         const renderCompetitionState = () => {
             const label = document.getElementById('competition-state-label');
-            const endBtn = document.getElementById('btn-admin-end-competition');
-            if (!label || !endBtn) return;
+            if (!label) return;
 
             if (gameState.competitionEnded) {
                 const time = gameState.endedAt ? new Date(gameState.endedAt).toLocaleString('cs-CZ') : '';
                 label.innerText = `Soutěž ukončena${time ? `: ${time}` : '.'}`;
                 label.className = 'text-rose-400 text-sm mt-1 font-bold';
-                endBtn.innerText = 'Soutěž už je ukončená';
-                endBtn.disabled = true;
-                endBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            } else if (gameState.scheduledEndAt) {
+                label.innerText = `Konec nastaven na ${new Date(gameState.scheduledEndAt).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.`;
+                label.className = 'text-amber-400 text-sm mt-1 font-bold';
             } else {
-                label.innerText = 'Soutěž běží.';
+                label.innerText = 'Soutěž běží. Konec zatím není nastaven.';
                 label.className = 'text-emerald-400 text-sm mt-1 font-bold';
-                endBtn.innerText = 'Nastavit konec soutěže';
-                endBtn.disabled = false;
-                endBtn.classList.remove('opacity-60', 'cursor-not-allowed');
             }
+            updateCountdownUI();
+        };
+
+        const formatTimeLeft = (ms) => {
+            const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        };
+
+        const updateCountdownUI = async () => {
+            const textEl = document.getElementById('countdown-text');
+            const statusEl = document.getElementById('countdown-status');
+            if (!textEl || !statusEl) return;
+
+            if (gameState.competitionEnded) {
+                textEl.innerText = gameState.endedAt ? `Ukončeno ${new Date(gameState.endedAt).toLocaleString('cs-CZ', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}` : 'Soutěž ukončena';
+                statusEl.innerText = 'Konec';
+                statusEl.className = 'text-[10px] font-black uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                return;
+            }
+
+            if (!gameState.scheduledEndAt) {
+                textEl.innerText = 'Nenastaveno';
+                statusEl.innerText = 'Běží';
+                statusEl.className = 'text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+                return;
+            }
+
+            const remaining = Number(gameState.scheduledEndAt) - Date.now();
+            if (remaining <= 0) {
+                textEl.innerText = 'Čas vypršel';
+                statusEl.innerText = 'Konec';
+                statusEl.className = 'text-[10px] font-black uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                if (db && !gameState.competitionEnded) {
+                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+                        competitionEnded: true,
+                        endedAt: Date.now(),
+                        endedBy: 'timer'
+                    }, { merge: true });
+                }
+                return;
+            }
+
+            textEl.innerText = `${formatTimeLeft(remaining)} do konce`;
+            statusEl.innerText = 'Běží';
+            statusEl.className = 'text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+        };
+
+        const getNextTimestampForTime = (timeValue) => {
+            if (!timeValue || !timeValue.includes(':')) return null;
+            const [hoursRaw, minutesRaw] = timeValue.split(':');
+            const hours = Number(hoursRaw);
+            const minutes = Number(minutesRaw);
+            if (Number.isNaN(hours) || Number.isNaN(minutes)) return null;
+
+            const now = new Date();
+            const target = new Date();
+            target.setHours(hours, minutes, 0, 0);
+            if (target.getTime() <= now.getTime()) {
+                target.setDate(target.getDate() + 1);
+            }
+            return target.getTime();
+        };
+
+        const renderLockedTasks = () => {
+            const container = document.getElementById('locked-tasks-container');
+            if (!container) return;
+
+            const lockedBosses = bosses.filter(boss => !!bossFightData[boss.id]);
+            if (lockedBosses.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Žádné zamčené úkoly.</div>`;
+                return;
+            }
+
+            container.innerHTML = lockedBosses.map(boss => {
+                const data = bossFightData[boss.id] || {};
+                return `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
+                    <div class="font-black text-slate-100 uppercase leading-tight">${boss.name}</div>
+                    <div class="text-xs text-slate-400 mt-1">Zamčeno hráčem: <span class="text-rose-400 font-bold">${data.claimedBy || 'Neznámý hráč'}</span></div>
+                    <button data-action="unlock-boss" data-boss-id="${boss.id}" class="w-full mt-3 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-3 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                        Obnovit tento úkol
+                    </button>
+                </div>
+                `;
+            }).join('');
         };
 
         const renderHistory = () => {
@@ -570,6 +693,7 @@
                 `;
             }).join('');
             lucide.createIcons();
+            renderLockedTasks();
         };
 
         const updateMyScoreUI = () => {
@@ -739,36 +863,73 @@
             showToast(`Odebráno ${formatNum(amount)} bodů hráči ${player.name}.`);
         };
 
-        const handleAdminEndCompetition = async () => {
+        const handleAdminSetEndTime = async () => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
             if (gameState.competitionEnded) return showToast("Soutěž už je ukončená.", true);
 
-            const sure = confirm('Opravdu ukončit soutěž? Hráči už nebudou moct přidávat body ani převádět body.');
+            const timeValue = document.getElementById('admin-end-time').value;
+            const scheduledEndAt = getNextTimestampForTime(timeValue);
+            if (!scheduledEndAt) return showToast("Vyber platný čas konce.", true);
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+                competitionEnded: false,
+                endedAt: null,
+                scheduledEndAt,
+                scheduledBy: currentUser?.uid || 'admin'
+            }, { merge: true });
+
+            showToast(`Konec soutěže nastaven na ${new Date(scheduledEndAt).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.`);
+        };
+
+        const handleAdminEndNow = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená.", true);
+
+            const sure = confirm('Opravdu ukončit soutěž předčasně? Hráči už nebudou moct přidávat body ani převádět body.');
             if (!sure) return;
 
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
                 competitionEnded: true,
                 endedAt: Date.now(),
+                scheduledEndAt: Date.now(),
                 endedBy: currentUser?.uid || 'admin'
             }, { merge: true });
-            showToast("Soutěž ukončena.");
+            showToast("Soutěž ukončena předčasně.");
         };
 
         const handleAdminResetTasks = async () => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
-            if (!db) return;
+            const box = document.getElementById('admin-reset-tasks-box');
+            if (!box) return;
+            box.classList.remove('hidden-view');
+            renderLockedTasks();
+        };
 
-            const sure = confirm('Opravdu vyresetovat úkoly? Odemknou se všechny boss fighty. Body hráčů zůstanou.');
+        const handleAdminUnlockBoss = async (bossId) => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db || !bossId) return;
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', bossId));
+            const boss = bosses.find(b => b.id === bossId);
+            showToast(`Obnoveno: ${boss?.name || 'úkol'}.`);
+        };
+
+        const handleAdminUnlockAllTasks = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            const lockedBosses = bosses.filter(boss => !!bossFightData[boss.id]);
+            if (lockedBosses.length === 0) return showToast("Žádné zamčené úkoly k obnovení.", true);
+
+            const sure = confirm('Opravdu obnovit všechny zamčené boss fighty? Body hráčům zůstanou.');
             if (!sure) return;
 
             const batch = writeBatch(db);
-            const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
-            bossesSnap.docs.forEach(d => {
-                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+            lockedBosses.forEach(boss => {
+                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', boss.id));
             });
             await batch.commit();
-            showToast("Úkoly / boss fighty vyresetovány.");
+            showToast("Všechny zamčené úkoly byly obnoveny.");
         };
 
         const handleAdminDeletePlayers = async () => {
@@ -817,6 +978,17 @@
             unsubPlayers = onSnapshot(playersRef, (snapshot) => {
                 playersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 playersData.sort((a, b) => b.score - a.score);
+
+                if (currentUser && myPlayerName && !playersData.find(p => p.id === currentUser.uid)) {
+                    localStorage.removeItem('vzp_playerName');
+                    myPlayerName = '';
+                    showToast('Hra byla resetována. Přihlas se znovu.', true);
+                    setTimeout(async () => {
+                        try { if (auth) await signOut(auth); } catch (e) {}
+                        window.location.reload();
+                    }, 800);
+                    return;
+                }
                 
                 renderLeaderboard();
                 updateTopBar();
@@ -844,7 +1016,7 @@
             // Stav soutěže
             const gameStateDoc = doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main');
             unsubGameState = onSnapshot(gameStateDoc, (snapshot) => {
-                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, ...snapshot.data() } : { competitionEnded: false, endedAt: null };
+                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, scheduledEndAt: null, ...snapshot.data() } : { competitionEnded: false, endedAt: null, scheduledEndAt: null };
                 renderCompetitionState();
             }, (err) => console.error("Firebase err:", err));
         };
@@ -853,6 +1025,9 @@
             lucide.createIcons();
             renderStaticLists();
             renderAdminAccess();
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = setInterval(updateCountdownUI, 1000);
+            updateCountdownUI();
 
             if (!auth) return; // Zastaví provedení pokud Firebase neprošlo inicializací
 
@@ -948,6 +1123,9 @@
                 const pts = parseFloat(btn.getAttribute('data-boss-pts'));
                 const name = btn.getAttribute('data-boss-name');
                 handleBossFight(id, pts, name);
+            } else if (action === 'unlock-boss') {
+                const id = btn.getAttribute('data-boss-id');
+                handleAdminUnlockBoss(id);
             }
         });
 
@@ -971,8 +1149,11 @@
         });
 
         document.getElementById('btn-admin-deduct-points').addEventListener('click', handleAdminDeductPoints);
-        document.getElementById('btn-admin-end-competition').addEventListener('click', handleAdminEndCompetition);
+        document.getElementById('btn-admin-set-end-time').addEventListener('click', handleAdminSetEndTime);
+        document.getElementById('btn-admin-end-now').addEventListener('click', handleAdminEndNow);
         document.getElementById('btn-admin-reset-tasks').addEventListener('click', handleAdminResetTasks);
+        document.getElementById('btn-close-reset-tasks-box').addEventListener('click', () => document.getElementById('admin-reset-tasks-box').classList.add('hidden-view'));
+        document.getElementById('btn-admin-unlock-all-tasks').addEventListener('click', handleAdminUnlockAllTasks);
         document.getElementById('btn-admin-delete-players').addEventListener('click', handleAdminDeletePlayers);
 
         // Tab Navigation
