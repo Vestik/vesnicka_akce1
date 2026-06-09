@@ -71,6 +71,7 @@
                 </div>
                 <div class="flex items-center gap-2 shrink-0">
                     <button id="btn-open-results" class="hidden-view text-[10px] font-black uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 active:scale-95">Vyhlášení</button>
+                    <div id="happy-hour-top-badge" class="hidden-view text-[10px] font-black uppercase px-2 py-1 rounded-full bg-red-500 text-white border border-red-300 happy-hour-flash">🔥 Happy Hour</div>
                     <div id="countdown-status" class="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Běží</div>
                 </div>
             </div>
@@ -759,8 +760,10 @@
             const text = document.getElementById('happy-hour-text');
             const countdownBar = document.getElementById('countdown-bar');
             const adminLabel = document.getElementById('happy-hour-admin-label');
+            const topBadge = document.getElementById('happy-hour-top-badge');
 
             if (banner) banner.classList.toggle('hidden-view', !active);
+            if (topBadge) topBadge.classList.toggle('hidden-view', !active);
             if (countdownBar) countdownBar.classList.toggle('happy-hour-flash', active);
 
             const remaining = active ? Math.max(0, Number(gameState.happyHourUntil) - Date.now()) : 0;
@@ -769,6 +772,7 @@
             const remainingText = `${mins}:${String(secs).padStart(2, '0')}`;
 
             if (text) text.innerText = active ? `Drinky jsou za dvojnásobek bodů. Zbývá ${remainingText}.` : 'Drinky jsou za dvojnásobek bodů.';
+            if (topBadge) topBadge.innerText = active ? `🔥 Happy ${remainingText}` : '🔥 Happy Hour';
             if (adminLabel) {
                 adminLabel.innerText = active ? `Happy Hour běží. Zbývá ${remainingText}.` : 'Happy Hour neběží.';
                 adminLabel.className = active ? 'text-xs text-red-300 mb-3 font-bold' : 'text-xs text-slate-400 mb-3';
@@ -1234,11 +1238,14 @@
             const minutes = parseInt(document.getElementById('happy-hour-minutes').value, 10);
             if (!Number.isFinite(minutes) || minutes <= 0) return showToast("Zadej počet minut.", true);
             const happyHourUntil = Date.now() + minutes * 60 * 1000;
+            const startedAt = Date.now();
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
                 happyHourUntil,
-                happyHourStartedAt: Date.now(),
+                happyHourStartedAt: startedAt,
                 happyHourStartedBy: currentUser?.uid || 'admin'
             }, { merge: true });
+            gameState = { ...gameState, happyHourUntil, happyHourStartedAt: startedAt, happyHourStartedBy: currentUser?.uid || 'admin' };
+            updateHappyHourUI();
             showToast(`Happy Hour spuštěna na ${minutes} min.`);
         };
 
@@ -1246,6 +1253,8 @@
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
             await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), { happyHourUntil: null }, { merge: true });
+            gameState = { ...gameState, happyHourUntil: null };
+            updateHappyHourUI();
             showToast("Happy Hour vypnuta.");
         };
 
@@ -1549,6 +1558,7 @@
                 gameState = snapshot.exists() ? { ...createDefaultGameState(), ...snapshot.data() } : createDefaultGameState();
                 handleGameResetRedirect();
                 renderCompetitionState();
+                updateHappyHourUI();
                 renderResultsModal();
                 maybeAutoOpenResults();
             }, (err) => console.error("Firebase err:", err));
@@ -1559,8 +1569,12 @@
             renderStaticLists();
             renderAdminAccess();
             if (countdownInterval) clearInterval(countdownInterval);
-            countdownInterval = setInterval(updateCountdownUI, 1000);
+            countdownInterval = setInterval(() => {
+                updateCountdownUI();
+                updateHappyHourUI();
+            }, 1000);
             updateCountdownUI();
+            updateHappyHourUI();
 
             if (!auth) return; // Zastaví provedení pokud Firebase neprošlo inicializací
 
