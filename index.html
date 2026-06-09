@@ -670,6 +670,7 @@
         let gameState = createDefaultGameState();
         let countdownInterval = null;
         let resetRedirectInProgress = false;
+        let wheelRotation = 0;
         let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
@@ -1408,9 +1409,15 @@
             const outcome = pool[Math.floor(Math.random() * pool.length)];
 
             // Šipka je nahoře. Kolo proto natočíme tak, aby střed přesné výseče vybraného výsledku skončil pod šipkou.
+            // Důležité: úhel musí po každém zatočení jen růst. Kdybychom pokaždé nastavili např. 1500deg,
+            // druhé zatočení by se někdy otočilo jen kousek nebo dokonce zpátky.
             const sliceCenterAngle = outcome.slice * 45 + 22.5;
             const tinyOffset = Math.random() * 12 - 6; // malá odchylka, ale pořád zůstane ve stejné výseči
-            const spinAngle = 1440 + (360 - sliceCenterAngle) + tinyOffset;
+            const targetModulo = ((360 - sliceCenterAngle + tinyOffset) % 360 + 360) % 360;
+            const currentModulo = ((wheelRotation % 360) + 360) % 360;
+            const deltaToTarget = (targetModulo - currentModulo + 360) % 360;
+            const spinAngle = wheelRotation + 1440 + deltaToTarget;
+            wheelRotation = spinAngle;
             if (disc) disc.style.transform = `rotate(${spinAngle}deg)`;
 
             await sleep(3100);
