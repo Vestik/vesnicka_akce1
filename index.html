@@ -192,11 +192,11 @@
                     <h2 class="text-xl font-black text-slate-100 uppercase mb-2">Účet</h2>
                     <p class="text-slate-400 text-sm mb-4">Přihlášen jako: <strong id="account-name" class="text-amber-500"></strong></p>
                     <div class="grid grid-cols-2 gap-3">
-                        <button id="btn-logout" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase text-sm">
-                            Odhlásit
-                        </button>
                         <button id="btn-open-admin-modal" class="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/60 text-amber-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase text-sm">
                             Admin
+                        </button>
+                        <button id="btn-logout" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                            Odhlásit
                         </button>
                     </div>
                 </div>
@@ -306,6 +306,31 @@
                         <button id="btn-admin-end-now" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
                             Ukončit soutěž předčasně
                         </button>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                        <h3 class="font-black uppercase text-slate-200 mb-3">Editor úkolů a bodů</h3>
+                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Přidej vlastní položku do vybrané kategorie. Nové základní tankování se automaticky objeví i ve sponzoringu s násobkem × 1.5.</p>
+                        <select id="custom-item-category" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                            <option value="drink">Základní tankování</option>
+                            <option value="quest">Side questy</option>
+                            <option value="boss">Boss fighty</option>
+                            <option value="debuff">Průsery / debuffy</option>
+                        </select>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <input type="text" id="custom-item-name" placeholder="Název úkolu / položky" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                            <input type="number" step="0.1" id="custom-item-points" placeholder="Body" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                        </div>
+                        <button id="btn-admin-add-custom-item" class="w-full bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-800 text-emerald-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Přidat položku
+                        </button>
+
+                        <div class="mt-5 pt-4 border-t border-slate-800">
+                            <h4 class="font-black uppercase text-slate-300 mb-3 text-sm">Vlastní přidané položky</h4>
+                            <div id="custom-items-container" class="space-y-2">
+                                <div class="text-center text-slate-500 py-4 font-bold">Zatím žádné vlastní položky.</div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 gap-3">
@@ -476,7 +501,9 @@
         let unsubBoss = null;
         let unsubHistory = null;
         let unsubGameState = null;
+        let unsubCustomItems = null;
         let actionsHistory = [];
+        let customItems = [];
         let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null };
         let countdownInterval = null;
         let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
@@ -484,10 +511,35 @@
 
         // --- NÁSTROJE ---
         const formatNum = (num) => {
-            if (typeof num !== 'number') return num;
-            if (num % 1 !== 0) return num.toFixed(4); // Formátování na 4 desetinná místa
-            return num.toString();
+            const n = Number(num);
+            if (!Number.isFinite(n)) return num;
+            return parseFloat(n.toFixed(4)).toString();
         };
+
+        const escapeHtml = (value) => {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        };
+
+        const getCategoryLabel = (category) => {
+            const labels = {
+                drink: 'Základní tankování',
+                quest: 'Side questy',
+                boss: 'Boss fighty',
+                debuff: 'Průsery / debuffy'
+            };
+            return labels[category] || category || 'Kategorie';
+        };
+
+        const getItemsByCategory = (category) => customItems.filter(item => item.category === category);
+        const getAllDrinks = () => [...baseDrinks, ...getItemsByCategory('drink')];
+        const getAllQuests = () => [...quests, ...getItemsByCategory('quest')];
+        const getAllBosses = () => [...bosses, ...getItemsByCategory('boss')];
+        const getAllDebuffs = () => [...debuffs, ...getItemsByCategory('debuff')];
 
         const showToast = (msg, isError = false) => {
             const toastEl = document.getElementById('toast');
@@ -638,7 +690,7 @@
             const container = document.getElementById('locked-tasks-container');
             if (!container) return;
 
-            const lockedBosses = bosses.filter(boss => !!bossFightData[boss.id]);
+            const lockedBosses = getAllBosses().filter(boss => !!bossFightData[boss.id]);
             if (lockedBosses.length === 0) {
                 container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Žádné zamčené úkoly.</div>`;
                 return;
@@ -648,10 +700,42 @@
                 const data = bossFightData[boss.id] || {};
                 return `
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4">
-                    <div class="font-black text-slate-100 uppercase leading-tight">${boss.name}</div>
-                    <div class="text-xs text-slate-400 mt-1">Zamčeno hráčem: <span class="text-rose-400 font-bold">${data.claimedBy || 'Neznámý hráč'}</span></div>
+                    <div class="font-black text-slate-100 uppercase leading-tight">${escapeHtml(boss.name)}</div>
+                    <div class="text-xs text-slate-400 mt-1">Zamčeno hráčem: <span class="text-rose-400 font-bold">${escapeHtml(data.claimedBy || 'Neznámý hráč')}</span></div>
                     <button data-action="unlock-boss" data-boss-id="${boss.id}" class="w-full mt-3 bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-3 rounded-xl active:scale-95 transition-transform uppercase text-sm">
                         Obnovit tento úkol
+                    </button>
+                </div>
+                `;
+            }).join('');
+        };
+
+
+        const renderCustomItemsEditor = () => {
+            const container = document.getElementById('custom-items-container');
+            if (!container) return;
+
+            if (customItems.length === 0) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Zatím žádné vlastní položky.</div>`;
+                return;
+            }
+
+            const sorted = [...customItems].sort((a, b) => {
+                const cat = getCategoryLabel(a.category).localeCompare(getCategoryLabel(b.category), 'cs');
+                if (cat !== 0) return cat;
+                return String(a.name || '').localeCompare(String(b.name || ''), 'cs');
+            });
+
+            container.innerHTML = sorted.map(item => {
+                const isNegative = Number(item.pts || 0) < 0;
+                return `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 flex items-center justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="font-bold text-slate-100 leading-tight truncate">${escapeHtml(item.name)}</div>
+                        <div class="text-xs text-slate-500 mt-1">${escapeHtml(getCategoryLabel(item.category))} • <span class="${isNegative ? 'text-rose-400' : 'text-emerald-400'} font-bold">${isNegative ? '' : '+'}${formatNum(item.pts || 0)} b.</span></div>
+                    </div>
+                    <button data-action="delete-custom-item" data-item-id="${item.id}" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-300 font-bold px-3 py-2 rounded-xl active:scale-95 text-xs uppercase shrink-0">
+                        Smazat
                     </button>
                 </div>
                 `;
@@ -692,54 +776,58 @@
 
         // --- UI RENDER FUNKCE ---
         const renderStaticLists = () => {
+            const allDrinks = getAllDrinks();
+            const allQuests = getAllQuests();
+            const allDebuffs = getAllDebuffs();
+
             // Drinks
-            document.getElementById('drinks-container').innerHTML = baseDrinks.map(drink => `
-                <button data-action="add-points" data-pts="${drink.pts}" data-label="${drink.name}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
-                    <span class="font-bold text-center leading-tight pointer-events-none">${drink.name}</span>
+            document.getElementById('drinks-container').innerHTML = allDrinks.map(drink => `
+                <button data-action="add-points" data-pts="${drink.pts}" data-label="${escapeHtml(drink.name)}" class="bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex flex-col items-center justify-center gap-1 active:scale-95 transition-transform border border-slate-700/50">
+                    <span class="font-bold text-center leading-tight pointer-events-none">${escapeHtml(drink.name)}</span>
                     <span class="text-emerald-400 font-black text-lg pointer-events-none">+${formatNum(drink.pts)}</span>
                 </button>
             `).join('');
 
             // Sponsorship
-            document.getElementById('sponsorship-container').innerHTML = baseDrinks.map(drink => {
-                const sponPts = drink.pts * 1.5;
+            document.getElementById('sponsorship-container').innerHTML = allDrinks.map(drink => {
+                const sponPts = Number(drink.pts) * 1.5;
                 return `
-                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" data-label="Sponzoring: ${drink.name}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
-                    <span class="font-bold text-xs text-center text-indigo-200 pointer-events-none">${drink.name}</span>
+                <button data-action="add-points" data-pts="${sponPts}" data-msg="Sponzoring! +${formatNum(sponPts)}" data-label="Sponzoring: ${escapeHtml(drink.name)}" class="bg-indigo-600/20 hover:bg-indigo-600/40 border border-indigo-500/30 p-3 rounded-xl flex flex-col items-center justify-center active:scale-95 transition-transform">
+                    <span class="font-bold text-xs text-center text-indigo-200 pointer-events-none">${escapeHtml(drink.name)}</span>
                     <span class="text-indigo-400 font-black pointer-events-none">+${formatNum(sponPts)}</span>
                 </button>
                 `;
             }).join('');
 
             // Quests
-            document.getElementById('quests-container').innerHTML = quests.map(q => `
-                <button data-action="add-points" data-pts="${q.pts}" data-label="${q.name}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
-                    <span class="font-bold pr-4 leading-tight text-slate-200 pointer-events-none">${q.name}</span>
+            document.getElementById('quests-container').innerHTML = allQuests.map(q => `
+                <button data-action="add-points" data-pts="${q.pts}" data-label="${escapeHtml(q.name)}" class="w-full bg-slate-800 hover:bg-slate-700 active:bg-slate-600 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-slate-700/50">
+                    <span class="font-bold pr-4 leading-tight text-slate-200 pointer-events-none">${escapeHtml(q.name)}</span>
                     <span class="text-blue-400 font-black whitespace-nowrap bg-blue-400/10 px-3 py-1 rounded-lg pointer-events-none">+${formatNum(q.pts)}</span>
                 </button>
             `).join('');
 
             // Debuffs
-            document.getElementById('debuffs-container').innerHTML = debuffs.map(d => `
-                <button data-action="add-points" data-pts="${d.pts}" data-label="${d.name}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
-                    <span class="font-bold pr-4 leading-tight text-rose-100 pointer-events-none">${d.name}</span>
-                    <span class="text-rose-400 font-black whitespace-nowrap bg-rose-950/50 px-3 py-1 rounded-lg pointer-events-none">${d.pts}</span>
+            document.getElementById('debuffs-container').innerHTML = allDebuffs.map(d => `
+                <button data-action="add-points" data-pts="${d.pts}" data-label="${escapeHtml(d.name)}" class="w-full bg-rose-900/40 hover:bg-rose-900/60 p-4 rounded-2xl flex justify-between items-center active:scale-[0.98] transition-transform text-left border border-rose-800">
+                    <span class="font-bold pr-4 leading-tight text-rose-100 pointer-events-none">${escapeHtml(d.name)}</span>
+                    <span class="text-rose-400 font-black whitespace-nowrap bg-rose-950/50 px-3 py-1 rounded-lg pointer-events-none">${formatNum(d.pts)}</span>
                 </button>
             `).join('');
         };
 
         const renderBosses = () => {
-            document.getElementById('bosses-container').innerHTML = bosses.map(boss => {
+            document.getElementById('bosses-container').innerHTML = getAllBosses().map(boss => {
                 const isClaimed = !!bossFightData[boss.id];
                 const claimer = isClaimed ? bossFightData[boss.id].claimedBy : '';
 
                 return `
-                <button ${isClaimed ? 'disabled' : ''} data-action="boss-fight" data-boss-id="${boss.id}" data-boss-pts="${boss.pts}" data-boss-name="${boss.name}" class="w-full p-5 rounded-2xl flex flex-col text-left transition-all relative overflow-hidden ${isClaimed ? 'bg-slate-900 border border-slate-800 opacity-60 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-amber-500 active:scale-[0.98] shadow-[0_0_20px_rgba(245,158,11,0.3)]'}">
+                <button ${isClaimed ? 'disabled' : ''} data-action="boss-fight" data-boss-id="${boss.id}" data-boss-pts="${boss.pts}" data-boss-name="${escapeHtml(boss.name)}" class="w-full p-5 rounded-2xl flex flex-col text-left transition-all relative overflow-hidden ${isClaimed ? 'bg-slate-900 border border-slate-800 opacity-60 cursor-not-allowed' : 'bg-gradient-to-r from-amber-600 to-amber-500 active:scale-[0.98] shadow-[0_0_20px_rgba(245,158,11,0.3)]'}">
                     <div class="flex justify-between items-start mb-2 relative z-10 pointer-events-none">
-                        <span class="font-black uppercase pr-4 leading-tight ${isClaimed ? 'text-slate-500' : 'text-amber-950'}">${boss.name}</span>
+                        <span class="font-black uppercase pr-4 leading-tight ${isClaimed ? 'text-slate-500' : 'text-amber-950'}">${escapeHtml(boss.name)}</span>
                         <span class="font-black text-xl whitespace-nowrap ${isClaimed ? 'text-slate-600' : 'text-amber-100 drop-shadow-md'}">+${formatNum(boss.pts)}</span>
                     </div>
-                    ${isClaimed ? `<div class="mt-2 text-sm font-bold text-rose-500 flex items-center gap-1 pointer-events-none"><i data-lucide="check-circle" class="w-4 h-4"></i> Vyžráno hráčem: ${claimer}</div>` : ''}
+                    ${isClaimed ? `<div class="mt-2 text-sm font-bold text-rose-500 flex items-center gap-1 pointer-events-none"><i data-lucide="check-circle" class="w-4 h-4"></i> Vyžráno hráčem: ${escapeHtml(claimer)}</div>` : ''}
                 </button>
                 `;
             }).join('');
@@ -953,6 +1041,45 @@
 
 
 
+        const handleAdminAddCustomItem = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+
+            const category = document.getElementById('custom-item-category').value;
+            const name = document.getElementById('custom-item-name').value.trim();
+            let pts = parseFloat(document.getElementById('custom-item-points').value);
+
+            if (!['drink', 'quest', 'boss', 'debuff'].includes(category)) return showToast("Vyber platnou kategorii.", true);
+            if (!name) return showToast("Zadej název položky.", true);
+            if (!Number.isFinite(pts)) return showToast("Zadej platný počet bodů.", true);
+            if (category === 'debuff' && pts > 0) pts = -pts;
+
+            const customRef = collection(db, 'artifacts', appId, 'public', 'data', 'customItems');
+            await addDoc(customRef, {
+                category,
+                name,
+                pts,
+                createdAt: Date.now(),
+                createdBy: currentUser?.uid || 'admin'
+            });
+
+            document.getElementById('custom-item-name').value = '';
+            document.getElementById('custom-item-points').value = '';
+            showToast(`Přidáno do ${getCategoryLabel(category)}: ${name}`);
+        };
+
+        const handleAdminDeleteCustomItem = async (itemId) => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db || !itemId) return;
+
+            const item = customItems.find(i => i.id === itemId);
+            const sure = confirm(`Opravdu smazat položku „${item?.name || 'vlastní položka'}“?`);
+            if (!sure) return;
+
+            await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'customItems', itemId));
+            showToast("Položka smazána.");
+        };
+
         const handleAdminDeductPoints = async () => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
@@ -1037,14 +1164,14 @@
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db || !bossId) return;
             await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', bossId));
-            const boss = bosses.find(b => b.id === bossId);
+            const boss = getAllBosses().find(b => b.id === bossId);
             showToast(`Obnoveno: ${boss?.name || 'úkol'}.`);
         };
 
         const handleAdminUnlockAllTasks = async () => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
-            const lockedBosses = bosses.filter(boss => !!bossFightData[boss.id]);
+            const lockedBosses = getAllBosses().filter(boss => !!bossFightData[boss.id]);
             if (lockedBosses.length === 0) return showToast("Žádné zamčené úkoly k obnovení.", true);
 
             const sure = confirm('Opravdu obnovit všechny zamčené boss fighty? Body hráčům zůstanou.');
@@ -1129,6 +1256,15 @@
                     bossFightData[doc.id] = doc.data();
                 });
                 renderBosses();
+            }, (err) => console.error("Firebase err:", err));
+
+            // Vlastní položky / editor úkolů
+            const customItemsRef = collection(db, 'artifacts', appId, 'public', 'data', 'customItems');
+            unsubCustomItems = onSnapshot(customItemsRef, (snapshot) => {
+                customItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderStaticLists();
+                renderBosses();
+                renderCustomItemsEditor();
             }, (err) => console.error("Firebase err:", err));
 
             // Historie bodů
@@ -1216,6 +1352,7 @@
                 if(unsubBoss) unsubBoss();
                 if(unsubHistory) unsubHistory();
                 if(unsubGameState) unsubGameState();
+                if(unsubCustomItems) unsubCustomItems();
                 if(auth) await signOut(auth);
                 localStorage.removeItem('vzp_playerName');
                 window.location.reload();
@@ -1265,6 +1402,9 @@
             } else if (action === 'unlock-boss') {
                 const id = btn.getAttribute('data-boss-id');
                 handleAdminUnlockBoss(id);
+            } else if (action === 'delete-custom-item') {
+                const id = btn.getAttribute('data-item-id');
+                handleAdminDeleteCustomItem(id);
             }
         });
 
@@ -1288,6 +1428,7 @@
         });
 
         document.getElementById('btn-admin-deduct-points').addEventListener('click', handleAdminDeductPoints);
+        document.getElementById('btn-admin-add-custom-item').addEventListener('click', handleAdminAddCustomItem);
         document.getElementById('btn-admin-set-end-time').addEventListener('click', handleAdminSetEndTime);
         document.getElementById('btn-admin-end-now').addEventListener('click', handleAdminEndNow);
         document.getElementById('btn-admin-reset-tasks').addEventListener('click', handleAdminResetTasks);
