@@ -272,7 +272,7 @@
                         <i data-lucide="history" class="w-5 h-5 text-blue-400"></i> Log bodů
                     </h2>
                     <p class="text-slate-400 text-sm mb-4 text-center">Přehled věcí, za které hráči dostali nebo ztratili body.</p>
-                    <button id="btn-open-log-page" class="w-full bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                    <button type="button" id="btn-open-log-page" class="w-full bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
                         Otevřít log
                     </button>
                 </div>
@@ -370,7 +370,7 @@
                         </h2>
                         <p class="text-slate-400 text-sm">Všechny poslední bodové akce hráčů.</p>
                     </div>
-                    <button id="btn-close-log-page" class="bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-3 active:scale-95 shrink-0">
+                    <button type="button" id="btn-close-log-page" class="bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-3 active:scale-95 shrink-0">
                         <i data-lucide="x" class="w-5 h-5"></i>
                     </button>
                 </div>
@@ -1798,6 +1798,16 @@
 
         document.getElementById('btn-close-admin-modal').addEventListener('click', () => {
             document.getElementById('admin-modal').classList.add('hidden-view');
+        });
+
+        document.getElementById('btn-open-log-page').addEventListener('click', () => {
+            document.getElementById('log-page').classList.remove('hidden-view');
+            renderHistory();
+            lucide.createIcons();
+        });
+
+        document.getElementById('btn-close-log-page').addEventListener('click', () => {
+            document.getElementById('log-page').classList.add('hidden-view');
         });
 
         document.getElementById('btn-open-results').addEventListener('click', () => openResultsModal(false));
