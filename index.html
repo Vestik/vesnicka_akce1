@@ -78,14 +78,15 @@
             text-shadow: 0 2px 6px rgba(0,0,0,0.8);
             text-transform: uppercase;
         }
-        .wheel-orbit-label:nth-child(1) { transform: translateY(-112px); }
-        .wheel-orbit-label:nth-child(2) { transform: rotate(45deg) translateY(-112px) rotate(-45deg); }
-        .wheel-orbit-label:nth-child(3) { transform: rotate(90deg) translateY(-112px) rotate(-90deg); }
-        .wheel-orbit-label:nth-child(4) { transform: rotate(135deg) translateY(-112px) rotate(-135deg); }
-        .wheel-orbit-label:nth-child(5) { transform: rotate(180deg) translateY(-112px) rotate(-180deg); }
-        .wheel-orbit-label:nth-child(6) { transform: rotate(225deg) translateY(-112px) rotate(-225deg); }
-        .wheel-orbit-label:nth-child(7) { transform: rotate(270deg) translateY(-112px) rotate(-270deg); }
-        .wheel-orbit-label:nth-child(8) { transform: rotate(315deg) translateY(-112px) rotate(-315deg); }
+        /* Popisky jsou přesně uprostřed jednotlivých výsečí, aby šipka ukazovala na vyhraný výsledek. */
+        .wheel-orbit-label:nth-child(1) { transform: rotate(22.5deg) translateY(-112px) rotate(-22.5deg); }
+        .wheel-orbit-label:nth-child(2) { transform: rotate(67.5deg) translateY(-112px) rotate(-67.5deg); }
+        .wheel-orbit-label:nth-child(3) { transform: rotate(112.5deg) translateY(-112px) rotate(-112.5deg); }
+        .wheel-orbit-label:nth-child(4) { transform: rotate(157.5deg) translateY(-112px) rotate(-157.5deg); }
+        .wheel-orbit-label:nth-child(5) { transform: rotate(202.5deg) translateY(-112px) rotate(-202.5deg); }
+        .wheel-orbit-label:nth-child(6) { transform: rotate(247.5deg) translateY(-112px) rotate(-247.5deg); }
+        .wheel-orbit-label:nth-child(7) { transform: rotate(292.5deg) translateY(-112px) rotate(-292.5deg); }
+        .wheel-orbit-label:nth-child(8) { transform: rotate(337.5deg) translateY(-112px) rotate(-337.5deg); }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans select-none overflow-x-hidden">
@@ -1390,26 +1391,26 @@
             if (status) status.classList.remove('hidden-view');
 
             const goodOutcomes = [
-                { title: '+100 bodů', delta: 100, text: 'Jackpot! Přičítá se ti +100 bodů.' },
-                { title: '+75 bodů', delta: 75, text: 'Hezká trefa! Přičítá se ti +75 bodů.' },
-                { title: '+50 bodů', delta: 50, text: 'Dobrá ruleta! Přičítá se ti +50 bodů.' },
-                { title: 'Další body ×2', delta: 0, nextDouble: true, text: 'Tvoje další kladná bodová akce se zdvojnásobí.' },
-                { title: 'Vrácený vklad + bonus', delta: 50, text: 'Vklad se ti vrátil a ještě bereš bonus.' }
+                { slice: 0, title: '+100 bodů', delta: 100, text: 'Jackpot! Přičítá se ti +100 bodů.' },
+                { slice: 2, title: 'Další body ×2', delta: 0, nextDouble: true, text: 'Tvoje další kladná bodová akce se zdvojnásobí.' },
+                { slice: 4, title: '+75 bodů', delta: 75, text: 'Hezká trefa! Přičítá se ti +75 bodů.' },
+                { slice: 6, title: '+50 bodů', delta: 50, text: 'Dobrá ruleta! Přičítá se ti +50 bodů.' }
             ];
             const badOutcomes = [
-                { title: '-50 bodů navíc', delta: -50, text: 'Smůla. Kromě vkladu ztrácíš dalších 50 bodů.' },
-                { title: '-25 bodů navíc', delta: -25, text: 'Ruleta tě kousla. Kromě vkladu ztrácíš dalších 25 bodů.' },
-                { title: 'Kup panáka adminovi', delta: 0, text: 'Body za vklad jsou pryč a úkol je jasný: panák adminovi.' },
-                { title: 'Sklenice vody', delta: 0, text: 'Body za vklad jsou pryč. Musíš vypít sklenici vody.' },
-                { title: 'Veřejná ostuda', delta: -10, text: 'Body za vklad jsou pryč a navíc -10 za ostudu.' }
+                { slice: 1, title: '-50 bodů navíc', delta: -50, text: 'Smůla. Kromě vkladu ztrácíš dalších 50 bodů.' },
+                { slice: 3, title: 'Sklenice vody', delta: 0, text: 'Body za vklad jsou pryč. Musíš vypít sklenici vody.' },
+                { slice: 5, title: 'Kup panáka adminovi', delta: 0, text: 'Body za vklad jsou pryč a úkol je jasný: panák adminovi.' },
+                { slice: 7, title: 'Veřejná ostuda', delta: -10, text: 'Body za vklad jsou pryč a navíc -10 za ostudu.' }
             ];
 
             const isGood = Math.random() < 0.5;
             const pool = isGood ? goodOutcomes : badOutcomes;
             const outcome = pool[Math.floor(Math.random() * pool.length)];
-            const targetSlice = isGood ? [0, 2, 4, 6][Math.floor(Math.random() * 4)] : [1, 3, 5, 7][Math.floor(Math.random() * 4)];
-            const sliceAngle = targetSlice * 45 + 22;
-            const spinAngle = 1440 + (360 - sliceAngle) + Math.floor(Math.random() * 18 - 9);
+
+            // Šipka je nahoře. Kolo proto natočíme tak, aby střed přesné výseče vybraného výsledku skončil pod šipkou.
+            const sliceCenterAngle = outcome.slice * 45 + 22.5;
+            const tinyOffset = Math.random() * 12 - 6; // malá odchylka, ale pořád zůstane ve stejné výseči
+            const spinAngle = 1440 + (360 - sliceCenterAngle) + tinyOffset;
             if (disc) disc.style.transform = `rotate(${spinAngle}deg)`;
 
             await sleep(3100);
