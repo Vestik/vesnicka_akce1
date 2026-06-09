@@ -20,6 +20,72 @@
             from { background-color: rgba(127, 29, 29, 0.95); box-shadow: 0 0 18px rgba(239, 68, 68, 0.45); }
             to { background-color: rgba(234, 88, 12, 0.95); box-shadow: 0 0 28px rgba(251, 191, 36, 0.65); }
         }
+
+        .wheel-disc {
+            width: min(78vw, 300px);
+            height: min(78vw, 300px);
+            border-radius: 9999px;
+            margin: 0 auto;
+            position: relative;
+            display: grid;
+            place-items: center;
+            background: conic-gradient(
+                rgba(34, 197, 94, 0.9) 0deg 45deg,
+                rgba(225, 29, 72, 0.9) 45deg 90deg,
+                rgba(132, 204, 22, 0.9) 90deg 135deg,
+                rgba(190, 18, 60, 0.9) 135deg 180deg,
+                rgba(16, 185, 129, 0.9) 180deg 225deg,
+                rgba(220, 38, 38, 0.9) 225deg 270deg,
+                rgba(245, 158, 11, 0.9) 270deg 315deg,
+                rgba(244, 63, 94, 0.9) 315deg 360deg
+            );
+            border: 10px solid rgba(15, 23, 42, 0.95);
+            box-shadow: 0 0 0 2px rgba(217, 70, 239, 0.4), 0 24px 60px rgba(0, 0, 0, 0.45);
+            transition: transform 3s cubic-bezier(.12,.74,.18,1);
+        }
+        .wheel-disc::before {
+            content: '';
+            position: absolute;
+            inset: 32px;
+            border-radius: 9999px;
+            background: rgba(15, 23, 42, 0.86);
+            border: 2px solid rgba(255, 255, 255, 0.18);
+        }
+        .wheel-disc::after {
+            content: '🎲';
+            position: relative;
+            z-index: 2;
+            font-size: 4rem;
+            filter: drop-shadow(0 8px 10px rgba(0,0,0,0.4));
+        }
+        .wheel-marker {
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 34px solid rgb(250, 204, 21);
+            filter: drop-shadow(0 6px 8px rgba(0,0,0,0.45));
+            margin: 0 auto -12px;
+            position: relative;
+            z-index: 5;
+        }
+        .wheel-orbit-label {
+            position: absolute;
+            z-index: 3;
+            font-weight: 900;
+            font-size: 0.78rem;
+            color: white;
+            text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+            text-transform: uppercase;
+        }
+        .wheel-orbit-label:nth-child(1) { transform: translateY(-112px); }
+        .wheel-orbit-label:nth-child(2) { transform: rotate(45deg) translateY(-112px) rotate(-45deg); }
+        .wheel-orbit-label:nth-child(3) { transform: rotate(90deg) translateY(-112px) rotate(-90deg); }
+        .wheel-orbit-label:nth-child(4) { transform: rotate(135deg) translateY(-112px) rotate(-135deg); }
+        .wheel-orbit-label:nth-child(5) { transform: rotate(180deg) translateY(-112px) rotate(-180deg); }
+        .wheel-orbit-label:nth-child(6) { transform: rotate(225deg) translateY(-112px) rotate(-225deg); }
+        .wheel-orbit-label:nth-child(7) { transform: rotate(270deg) translateY(-112px) rotate(-270deg); }
+        .wheel-orbit-label:nth-child(8) { transform: rotate(315deg) translateY(-112px) rotate(-315deg); }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans select-none overflow-x-hidden">
@@ -165,20 +231,6 @@
                     </div>
                 </div>
 
-                <!-- Kolo štěstí -->
-                <div class="bg-fuchsia-950/30 border border-fuchsia-900/50 p-5 rounded-3xl">
-                    <h2 class="text-xl font-black text-fuchsia-400 mb-3 uppercase flex items-center gap-2">
-                        <i data-lucide="dices" class="w-5 h-5"></i> Kolo štěstí / Ruská ruleta
-                    </h2>
-                    <p class="text-sm text-fuchsia-200/80 mb-4 font-medium">
-                        Zaplatíš 25 bodů a systém ti náhodně hodí dobrou nebo špatnou věc. Šance je 50/50.
-                    </p>
-                    <button id="btn-spin-wheel" class="w-full bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-black py-4 rounded-xl uppercase active:scale-95 transition-transform shadow-lg shadow-fuchsia-900/20">
-                        Zatočit za 25 bodů
-                    </button>
-                    <div id="wheel-result" class="hidden-view mt-4 bg-slate-950 border border-fuchsia-800 rounded-2xl p-4 text-center font-bold"></div>
-                </div>
-
                 <!-- Debuffy -->
                 <div>
                     <h2 class="text-xl font-black text-rose-500 mb-3 uppercase flex items-center gap-2">
@@ -212,6 +264,18 @@
                     </div>
                 </div>
 
+
+                <!-- Log bodů -->
+                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
+                    <h2 class="text-xl font-black text-slate-100 uppercase mb-2 flex items-center justify-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-blue-400"></i> Log bodů
+                    </h2>
+                    <p class="text-slate-400 text-sm mb-4 text-center">Přehled věcí, za které hráči dostali nebo ztratili body.</p>
+                    <button id="btn-open-log-page" class="w-full bg-blue-900/30 hover:bg-blue-900/50 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                        Otevřít log
+                    </button>
+                </div>
+
                 <!-- Účet / Odhlášení -->
                 <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center">
                     <h2 class="text-xl font-black text-slate-100 uppercase mb-2">Účet</h2>
@@ -227,22 +291,42 @@
                 </div>
             </div>
 
-            <!-- TAB: ADMIN / LOG -->
-            <div id="tab-admin" class="hidden-view animate-in fade-in duration-200 mt-4 space-y-4">
-                <div class="text-center mb-6">
-                    <h2 class="text-2xl font-black text-slate-100 uppercase">Log bodů</h2>
-                    <p class="text-slate-400 text-sm">Přehled věcí, za které hráči dostali nebo ztratili body.</p>
+            <!-- TAB: KOLO ŠTĚSTÍ -->
+            <div id="tab-wheel" class="hidden-view animate-in fade-in duration-200 mt-4 space-y-4">
+                <div class="text-center mb-4">
+                    <h2 class="text-2xl font-black text-fuchsia-300 uppercase flex items-center justify-center gap-2">
+                        <i data-lucide="dices" class="w-7 h-7"></i> Kolo štěstí
+                    </h2>
+                    <p class="text-slate-400 text-sm mt-1">Zaplatíš 25 bodů a zatočíš. Dobré a špatné výsledky jsou 50/50.</p>
                 </div>
 
-                <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                    <h2 class="text-xl font-black text-slate-100 uppercase mb-4 flex items-center gap-2">
-                        <i data-lucide="history" class="w-5 h-5 text-blue-400"></i> Historie bodů
-                    </h2>
-                    <div id="history-container" class="space-y-3">
-                        <div class="text-center text-slate-500 py-6 font-bold">Zatím žádná historie...</div>
+                <div class="bg-fuchsia-950/30 border border-fuchsia-900/50 p-5 rounded-3xl overflow-hidden relative">
+                    <div class="absolute -top-24 -right-24 w-52 h-52 bg-fuchsia-500/10 rounded-full blur-3xl"></div>
+                    <div class="relative z-10">
+                        <div class="wheel-marker"></div>
+                        <div id="wheel-disc" class="wheel-disc">
+                            <span class="wheel-orbit-label">+100</span>
+                            <span class="wheel-orbit-label">-50</span>
+                            <span class="wheel-orbit-label">×2</span>
+                            <span class="wheel-orbit-label">Voda</span>
+                            <span class="wheel-orbit-label">+75</span>
+                            <span class="wheel-orbit-label">Panák</span>
+                            <span class="wheel-orbit-label">+50</span>
+                            <span class="wheel-orbit-label">Ostuda</span>
+                        </div>
+
+                        <div id="wheel-spin-status" class="text-center text-fuchsia-200 font-black uppercase tracking-widest mt-5 hidden-view">
+                            Točím... drž si půllitr.
+                        </div>
+
+                        <button id="btn-spin-wheel" class="w-full mt-5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white font-black py-4 rounded-xl uppercase active:scale-95 transition-transform shadow-lg shadow-fuchsia-900/20">
+                            Zatočit za 25 bodů
+                        </button>
+                        <div id="wheel-result" class="hidden-view mt-4 bg-slate-950 border border-fuchsia-800 rounded-2xl p-4 text-center font-bold"></div>
                     </div>
                 </div>
             </div>
+
 
         </div>
 
@@ -263,14 +347,37 @@
                     <i data-lucide="info" class="w-6 h-6 mb-1"></i>
                     <span class="text-[10px] font-bold uppercase tracking-widest">Pravidla</span>
                 </button>
-                <button data-tab="admin" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
-                    <i data-lucide="shield" class="w-6 h-6 mb-1"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-widest">Log</span>
+                <button data-tab="wheel" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
+                    <i data-lucide="dices" class="w-6 h-6 mb-1"></i>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Kolo</span>
                 </button>
 
             </div>
         </div>
 
+    </div>
+
+
+    <!-- LOG PAGE MODAL -->
+    <div id="log-page" class="hidden-view fixed inset-0 z-50 bg-slate-950 px-4 py-6 overflow-y-auto">
+        <div class="max-w-md mx-auto">
+            <div class="sticky top-0 bg-slate-950/95 backdrop-blur z-10 pb-4 mb-4 border-b border-slate-800">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-100 uppercase flex items-center gap-2">
+                            <i data-lucide="history" class="w-6 h-6 text-blue-400"></i> Log bodů
+                        </h2>
+                        <p class="text-slate-400 text-sm">Všechny poslední bodové akce hráčů.</p>
+                    </div>
+                    <button id="btn-close-log-page" class="bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-3 active:scale-95 shrink-0">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="history-container" class="space-y-3 pb-8">
+                <div class="text-center text-slate-500 py-6 font-bold">Zatím žádná historie...</div>
+            </div>
+        </div>
     </div>
 
     <!-- ADMIN MODAL -->
@@ -580,6 +687,8 @@
                 .replaceAll('"', '&quot;')
                 .replaceAll("'", '&#039;');
         };
+
+        const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
         const getCategoryLabel = (category) => {
             const labels = {
@@ -1266,6 +1375,20 @@
             const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
             if (Number(myData.score || 0) < cost) return showToast("Na zatočení potřebuješ aspoň 25 bodů.", true);
 
+            const btn = document.getElementById('btn-spin-wheel');
+            const disc = document.getElementById('wheel-disc');
+            const status = document.getElementById('wheel-spin-status');
+            const resultBox = document.getElementById('wheel-result');
+            if (btn?.disabled) return;
+
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('opacity-60', 'cursor-not-allowed');
+                btn.innerText = 'Kolo se točí...';
+            }
+            if (resultBox) resultBox.classList.add('hidden-view');
+            if (status) status.classList.remove('hidden-view');
+
             const goodOutcomes = [
                 { title: '+100 bodů', delta: 100, text: 'Jackpot! Přičítá se ti +100 bodů.' },
                 { title: '+75 bodů', delta: 75, text: 'Hezká trefa! Přičítá se ti +75 bodů.' },
@@ -1284,6 +1407,13 @@
             const isGood = Math.random() < 0.5;
             const pool = isGood ? goodOutcomes : badOutcomes;
             const outcome = pool[Math.floor(Math.random() * pool.length)];
+            const targetSlice = isGood ? [0, 2, 4, 6][Math.floor(Math.random() * 4)] : [1, 3, 5, 7][Math.floor(Math.random() * 4)];
+            const sliceAngle = targetSlice * 45 + 22;
+            const spinAngle = 1440 + (360 - sliceAngle) + Math.floor(Math.random() * 18 - 9);
+            if (disc) disc.style.transform = `rotate(${spinAngle}deg)`;
+
+            await sleep(3100);
+
             const netAmount = -cost + Number(outcome.delta || 0);
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
             const payload = { score: Number(myData.score || 0) + netAmount };
@@ -1298,11 +1428,16 @@
                 playerName: myPlayerName || myData.name || 'Neznámý hráč'
             });
 
-            const resultBox = document.getElementById('wheel-result');
             if (resultBox) {
                 resultBox.classList.remove('hidden-view');
                 resultBox.className = `mt-4 border rounded-2xl p-4 text-center font-bold ${isGood ? 'bg-emerald-950/50 border-emerald-700 text-emerald-200' : 'bg-rose-950/50 border-rose-700 text-rose-200'}`;
-                resultBox.innerHTML = `<div class="text-xs uppercase tracking-widest mb-1">${isGood ? 'Dobrá věc' : 'Špatná věc'}</div><div class="text-xl font-black">${escapeHtml(outcome.title)}</div><div class="text-sm mt-1">${escapeHtml(outcome.text)}</div><div class="text-xs mt-2 text-slate-300">Celkový dopad včetně vkladu: ${netAmount >= 0 ? '+' : ''}${formatNum(netAmount)} b.</div>`;
+                resultBox.innerHTML = `<div class="text-xs uppercase tracking-widest mb-1">${isGood ? 'Dobrá věc' : 'Špatná věc'}</div><div class="text-2xl font-black">${escapeHtml(outcome.title)}</div><div class="text-sm mt-1">${escapeHtml(outcome.text)}</div><div class="text-xs mt-2 text-slate-300">Celkový dopad včetně vkladu: ${netAmount >= 0 ? '+' : ''}${formatNum(netAmount)} b.</div>`;
+            }
+            if (status) status.classList.add('hidden-view');
+            if (btn) {
+                btn.disabled = false;
+                btn.classList.remove('opacity-60', 'cursor-not-allowed');
+                btn.innerText = 'Zatočit za 25 bodů';
             }
             showToast(`${isGood ? 'Štěstí!' : 'Smůla!'} ${outcome.title}` , !isGood);
         };
@@ -1733,7 +1868,7 @@
         document.getElementById('btn-admin-delete-players').addEventListener('click', handleAdminDeletePlayers);
 
         // Tab Navigation
-        const tabs = ['score', 'leaderboard', 'rules', 'admin'];
+        const tabs = ['score', 'leaderboard', 'rules', 'wheel'];
         document.querySelectorAll('.nav-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const targetTab = btn.getAttribute('data-tab');
