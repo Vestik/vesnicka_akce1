@@ -540,6 +540,8 @@
         let bossFightData = {};
         let toastTimeout = null;
         let myPlayerName = localStorage.getItem('vzp_playerName') || '';
+        const hadStoredPlayerNameOnLoad = !!myPlayerName;
+        let playerSessionStartedAt = myPlayerName ? Date.now() : 0;
         let unsubPlayers = null;
         let unsubBoss = null;
         let unsubHistory = null;
@@ -547,8 +549,18 @@
         let unsubCustomItems = null;
         let actionsHistory = [];
         let customItems = [];
-        let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {} };
+        const createDefaultGameState = () => ({
+            competitionEnded: false,
+            endedAt: null,
+            scheduledEndAt: null,
+            happyHourUntil: null,
+            disabledDefaultItems: {},
+            resetAt: null,
+            resetBy: null
+        });
+        let gameState = createDefaultGameState();
         let countdownInterval = null;
+        let resetRedirectInProgress = false;
         let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
@@ -1415,15 +1427,65 @@
                 batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
             });
 
-            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+            const resetAt = Date.now();
+
+            // Tady NEPOUŽÍVAT merge:true. Jinak by ve Firestore mohl zůstat starý scheduledEndAt,
+            // hráč by se přihlásil do nové hry a soutěž by se hned znovu ukončila.
+            batch.set(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
                 competitionEnded: false,
                 endedAt: null,
-                resetAt: Date.now(),
+                scheduledEndAt: null,
+                happyHourUntil: null,
+                disabledDefaultItems: {},
+                resetAt,
                 resetBy: currentUser?.uid || 'admin'
-            }, { merge: true });
+            });
 
             await batch.commit();
-            showToast("Všichni hráči a body byli vymazáni.");
+            showToast("Všichni hráči a body byli vymazáni. Spouští se nová hra.");
+        };
+
+        const forceLoginAfterGameReset = async (resetAt) => {
+            if (resetRedirectInProgress) return;
+            resetRedirectInProgress = true;
+            try {
+                localStorage.setItem('vzp_lastGameResetAt', String(resetAt || Date.now()));
+                localStorage.removeItem('vzp_playerName');
+                sessionStorage.removeItem('vzp_adminUnlocked');
+                sessionStorage.removeItem('vzp_resultsShownForEndedAt');
+                myPlayerName = '';
+                adminUnlocked = false;
+                if (unsubPlayers) unsubPlayers();
+                if (unsubBoss) unsubBoss();
+                if (unsubHistory) unsubHistory();
+                if (unsubGameState) unsubGameState();
+                document.getElementById('results-modal')?.classList.add('hidden-view');
+                document.getElementById('admin-modal')?.classList.add('hidden-view');
+                document.getElementById('reset-tasks-modal')?.classList.add('hidden-view');
+                if (auth) await signOut(auth);
+            } catch (error) {
+                console.error('Chyba při návratu na login po resetu:', error);
+            } finally {
+                window.location.reload();
+            }
+        };
+
+        const handleGameResetRedirect = () => {
+            const resetAt = Number(gameState.resetAt || 0);
+            if (!resetAt || !myPlayerName) return;
+
+            const lastSeenResetAt = Number(localStorage.getItem('vzp_lastGameResetAt') || 0);
+            if (resetAt <= lastSeenResetAt) return;
+
+            // 1) Hráč už měl staré přihlášení uložené v prohlížeči a otevře hru po resetu.
+            // 2) Hráč/admin byl přihlášený v momentě, kdy admin spustil reset.
+            // Čistě nového hráče, který se přihlásí až po resetu, to už nevykopne.
+            const oldStoredLogin = hadStoredPlayerNameOnLoad;
+            const activeDuringThisReset = playerSessionStartedAt && resetAt >= (playerSessionStartedAt - 1000);
+
+            if (oldStoredLogin || activeDuringThisReset) {
+                forceLoginAfterGameReset(resetAt);
+            }
         };
 
         // --- AUTH & SETUP ---
@@ -1484,7 +1546,8 @@
             // Stav soutěže
             const gameStateDoc = doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main');
             unsubGameState = onSnapshot(gameStateDoc, (snapshot) => {
-                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {}, ...snapshot.data() } : { competitionEnded: false, endedAt: null, scheduledEndAt: null, happyHourUntil: null, disabledDefaultItems: {} };
+                gameState = snapshot.exists() ? { ...createDefaultGameState(), ...snapshot.data() } : createDefaultGameState();
+                handleGameResetRedirect();
                 renderCompetitionState();
                 renderResultsModal();
                 maybeAutoOpenResults();
@@ -1536,7 +1599,11 @@
             if (!currentUser) return showToast("Načítám spojení, zkus to za vteřinu...", true);
 
             myPlayerName = nameInput;
+            playerSessionStartedAt = Date.now();
             localStorage.setItem('vzp_playerName', myPlayerName);
+            if (gameState.resetAt) {
+                localStorage.setItem('vzp_lastGameResetAt', String(gameState.resetAt));
+            }
             
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
             const docSnap = await getDoc(playerDoc);
