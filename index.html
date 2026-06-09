@@ -55,21 +55,23 @@
     <div id="main-screen" class="hidden-view pb-28 pt-20">
         
         <!-- Top Bar (Bank Info) -->
-        <div class="fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-40 px-4 py-3 shadow-md">
-            <div class="flex justify-between items-center max-w-md mx-auto">
-                <div class="text-center">
-                    <div class="text-xs text-slate-400 font-bold uppercase tracking-wider">Celkový Bank</div>
-                    <div id="total-bank" class="text-xl font-black text-amber-500">0 Kč</div>
+        <div class="fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-40 px-3 py-3 shadow-md">
+            <div class="grid grid-cols-4 gap-2 items-center max-w-md mx-auto">
+                <div class="text-center bg-slate-950/60 border border-slate-800 px-2 py-1 rounded-xl">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bank</div>
+                    <div id="total-bank" class="text-lg font-black text-amber-500">0 Kč</div>
                 </div>
-                <div class="flex gap-4">
-                    <div class="text-center bg-slate-800 px-3 py-1 rounded-lg">
-                        <span class="text-xs">🥇 1. místo</span>
-                        <div id="prize-1" class="font-bold text-amber-400">0 Kč</div>
-                    </div>
-                    <div class="text-center bg-slate-800 px-3 py-1 rounded-lg">
-                        <span class="text-xs">🥈 2. místo</span>
-                        <div id="prize-2" class="font-bold text-slate-300">0 Kč</div>
-                    </div>
+                <div class="text-center bg-slate-950/60 border border-slate-800 px-2 py-1 rounded-xl">
+                    <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Moje body</div>
+                    <div id="top-my-score" class="text-lg font-black text-white">0</div>
+                </div>
+                <div class="text-center bg-slate-800 px-2 py-1 rounded-xl">
+                    <span class="text-[10px]">🥇 1. místo</span>
+                    <div id="prize-1" class="font-bold text-amber-400 text-sm">0 Kč</div>
+                </div>
+                <div class="text-center bg-slate-800 px-2 py-1 rounded-xl">
+                    <span class="text-[10px]">🥈 2. místo</span>
+                    <div id="prize-2" class="font-bold text-slate-300 text-sm">0 Kč</div>
                 </div>
             </div>
         </div>
@@ -172,51 +174,22 @@
                 <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl text-center">
                     <h2 class="text-xl font-black text-slate-100 uppercase mb-2">Účet</h2>
                     <p class="text-slate-400 text-sm mb-4">Přihlášen jako: <strong id="account-name" class="text-amber-500"></strong></p>
-                    <button id="btn-logout" class="w-full bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
-                        Odhlásit se / Změnit hráče
-                    </button>
+                    <div class="grid grid-cols-2 gap-3">
+                        <button id="btn-logout" class="bg-rose-900/30 hover:bg-rose-900/50 border border-rose-800 text-rose-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                            Odhlásit
+                        </button>
+                        <button id="btn-open-admin-modal" class="bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/60 text-amber-400 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase text-sm">
+                            Admin
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- TAB: ADMIN -->
+            <!-- TAB: ADMIN / LOG -->
             <div id="tab-admin" class="hidden-view animate-in fade-in duration-200 mt-4 space-y-4">
-                <div id="admin-login-box" class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                    <h2 class="text-2xl font-black text-slate-100 uppercase mb-2 flex items-center gap-2">
-                        <i data-lucide="shield" class="w-6 h-6 text-amber-500"></i> Admin panel
-                    </h2>
-                    <p class="text-slate-400 text-sm mb-4">Zadej heslo pořadatele pro správu hry.</p>
-                    <input type="password" id="admin-password" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors mb-3" placeholder="Admin heslo">
-                    <button id="btn-admin-login" class="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl uppercase active:scale-95 transition-transform">
-                        Odemknout admin
-                    </button>
-                </div>
-
-                <div id="admin-panel-box" class="hidden-view space-y-4">
-                    <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
-                        <div class="flex items-center justify-between gap-3 mb-4">
-                            <div>
-                                <h2 class="text-2xl font-black text-slate-100 uppercase flex items-center gap-2">
-                                    <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500"></i> Admin panel
-                                </h2>
-                                <p class="text-slate-400 text-sm">Odemčeno pro pořadatele.</p>
-                            </div>
-                            <button id="btn-admin-logout" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl active:scale-95">
-                                Zamknout
-                            </button>
-                        </div>
-
-                        <div class="grid grid-cols-1 gap-3">
-                            <button id="btn-admin-undo-last" class="w-full bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
-                                Zpět poslední bodovou akci
-                            </button>
-                            <button id="btn-admin-reset-game" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
-                                Reset hry
-                            </button>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-3 leading-relaxed">
-                            Reset hry vynuluje skóre všech hráčů, odemkne boss fighty a smaže historii bodů. Hráči zůstanou přihlášení.
-                        </p>
-                    </div>
+                <div class="text-center mb-6">
+                    <h2 class="text-2xl font-black text-slate-100 uppercase">Log bodů</h2>
+                    <p class="text-slate-400 text-sm">Přehled věcí, za které hráči dostali nebo ztratili body.</p>
                 </div>
 
                 <div class="bg-slate-900 border border-slate-800 p-6 rounded-3xl">
@@ -250,12 +223,77 @@
                 </button>
                 <button data-tab="admin" class="nav-btn text-slate-500 hover:text-slate-400 flex flex-col items-center w-full p-2 rounded-xl transition-colors">
                     <i data-lucide="shield" class="w-6 h-6 mb-1"></i>
-                    <span class="text-[10px] font-bold uppercase tracking-widest">Admin</span>
+                    <span class="text-[10px] font-bold uppercase tracking-widest">Log</span>
                 </button>
 
             </div>
         </div>
 
+    </div>
+
+    <!-- ADMIN MODAL -->
+    <div id="admin-modal" class="hidden-view fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+        <div class="max-w-md mx-auto min-h-full flex items-center justify-center">
+            <div class="w-full bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl p-6 relative">
+                <button id="btn-close-admin-modal" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-2 active:scale-95">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+
+                <div id="admin-login-box" class="pt-4">
+                    <h2 class="text-2xl font-black text-slate-100 uppercase mb-2 flex items-center gap-2">
+                        <i data-lucide="shield" class="w-6 h-6 text-amber-500"></i> Admin přihlášení
+                    </h2>
+                    <p class="text-slate-400 text-sm mb-4">Zadej heslo pořadatele pro správu hry.</p>
+                    <input type="password" id="admin-password" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors mb-3" placeholder="Admin heslo">
+                    <button id="btn-admin-login" class="w-full bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl uppercase active:scale-95 transition-transform">
+                        Odemknout admin
+                    </button>
+                </div>
+
+                <div id="admin-panel-box" class="hidden-view pt-4 space-y-4">
+                    <div class="flex items-start justify-between gap-3">
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-100 uppercase flex items-center gap-2">
+                                <i data-lucide="shield-check" class="w-6 h-6 text-emerald-500"></i> Admin správa
+                            </h2>
+                            <p id="competition-state-label" class="text-slate-400 text-sm mt-1">Soutěž běží.</p>
+                        </div>
+                        <button id="btn-admin-logout" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold px-4 py-2 rounded-xl active:scale-95 shrink-0">
+                            Zamknout
+                        </button>
+                    </div>
+
+                    <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                        <h3 class="font-black uppercase text-slate-200 mb-3">Odebrat body hráči</h3>
+                        <select id="admin-deduct-player" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                            <option value="">-- Vyber hráče --</option>
+                        </select>
+                        <div class="grid grid-cols-2 gap-2 mb-3">
+                            <input type="number" id="admin-deduct-amount" placeholder="Kolik bodů" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                            <input type="text" id="admin-deduct-reason" placeholder="Důvod" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
+                        </div>
+                        <button id="btn-admin-deduct-points" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Odebrat body
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3">
+                        <button id="btn-admin-end-competition" class="w-full bg-amber-600/20 hover:bg-amber-600/30 border border-amber-600/60 text-amber-300 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Nastavit konec soutěže
+                        </button>
+                        <button id="btn-admin-reset-tasks" class="w-full bg-blue-900/40 hover:bg-blue-900/60 border border-blue-800 text-blue-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Vyresetovat úkoly / boss fighty
+                        </button>
+                        <button id="btn-admin-delete-players" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase">
+                            Vymazat všechny účty a body
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-500 leading-relaxed">
+                        Poznámka: web umí smazat hráče uložené ve Firestore. Skutečné anonymní Firebase Auth účty se z klientské stránky mazat nedají, ale hráči budou z žebříčku odstraněni.
+                    </p>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MAIN JAVASCRIPT LOGIC -->
@@ -353,7 +391,9 @@
         let unsubPlayers = null;
         let unsubBoss = null;
         let unsubHistory = null;
+        let unsubGameState = null;
         let actionsHistory = [];
+        let gameState = { competitionEnded: false, endedAt: null };
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
         // --- NÁSTROJE ---
@@ -408,7 +448,40 @@
                 loginBox.classList.remove('hidden-view');
                 panelBox.classList.add('hidden-view');
             }
+            renderAdminPlayersSelect();
+            renderCompetitionState();
             lucide.createIcons();
+        };
+
+        const renderAdminPlayersSelect = () => {
+            const selectEl = document.getElementById('admin-deduct-player');
+            if (!selectEl) return;
+            const currentVal = selectEl.value;
+            selectEl.innerHTML = `<option value="">-- Vyber hráče --</option>` + playersData.map(p => `
+                <option value="${p.id}">${p.name} (${formatNum(p.score || 0)} b.)</option>
+            `).join('');
+            if (playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
+        };
+
+        const renderCompetitionState = () => {
+            const label = document.getElementById('competition-state-label');
+            const endBtn = document.getElementById('btn-admin-end-competition');
+            if (!label || !endBtn) return;
+
+            if (gameState.competitionEnded) {
+                const time = gameState.endedAt ? new Date(gameState.endedAt).toLocaleString('cs-CZ') : '';
+                label.innerText = `Soutěž ukončena${time ? `: ${time}` : '.'}`;
+                label.className = 'text-rose-400 text-sm mt-1 font-bold';
+                endBtn.innerText = 'Soutěž už je ukončená';
+                endBtn.disabled = true;
+                endBtn.classList.add('opacity-60', 'cursor-not-allowed');
+            } else {
+                label.innerText = 'Soutěž běží.';
+                label.className = 'text-emerald-400 text-sm mt-1 font-bold';
+                endBtn.innerText = 'Nastavit konec soutěže';
+                endBtn.disabled = false;
+                endBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+            }
         };
 
         const renderHistory = () => {
@@ -501,7 +574,8 @@
 
         const updateMyScoreUI = () => {
             const myData = playersData.find(p => p.id === currentUser?.uid) || { score: 0 };
-            document.getElementById('my-score-display').innerText = formatNum(myData.score);
+            document.getElementById('my-score-display').innerText = formatNum(myData.score || 0);
+            document.getElementById('top-my-score').innerText = formatNum(myData.score || 0);
         };
 
         const updateTopBar = () => {
@@ -556,11 +630,13 @@
                     <option value="${p.id}">${p.name} (${formatNum(p.score)} b.)</option>
                 `).join('');
             if(playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
+            renderAdminPlayersSelect();
         };
 
         // --- AKCE A LOGIKA ---
         const handleAddPoints = async (amount, customMsg, label = 'Bodová akce') => {
             if (!currentUser || !db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Body nejdou přidávat.", true);
             const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
             const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
             
@@ -579,6 +655,7 @@
 
         const handleBossFight = async (bossId, bossPts, bossName) => {
             if (!currentUser || !db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Boss fight nejde splnit.", true);
             if (bossFightData[bossId]) {
                 showToast("Tohle už někdo vyžral!", true);
                 return;
@@ -591,6 +668,7 @@
 
         const handleTransfer = async () => {
             if (!currentUser || !db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Převody jsou vypnuté.", true);
             const targetId = document.getElementById('transfer-target').value;
             const amount = parseFloat(document.getElementById('transfer-amount').value);
             
@@ -625,53 +703,86 @@
 
 
 
-        const handleAdminUndoLast = async () => {
-            if (!adminUnlocked) return showToast("Nejdřív odemkni admin panel!", true);
+        const handleAdminDeductPoints = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
 
-            const lastAction = actionsHistory.find(a => !a.undone && a.type !== 'reset');
-            if (!lastAction) return showToast("Není co vracet zpět.", true);
-
-            const playerId = lastAction.playerId || lastAction.actorId;
+            const playerId = document.getElementById('admin-deduct-player').value;
+            const amount = parseFloat(document.getElementById('admin-deduct-amount').value);
+            const reason = document.getElementById('admin-deduct-reason').value.trim() || 'Odebrání bodů adminem';
             const player = playersData.find(p => p.id === playerId);
-            if (!player) return showToast("Hráč pro poslední akci už neexistuje.", true);
 
-            const batch = writeBatch(db);
-            batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId), {
-                score: (player.score || 0) - Number(lastAction.amount || 0)
+            if (!playerId || !player) return showToast("Vyber hráče.", true);
+            if (isNaN(amount) || amount <= 0) return showToast("Zadej platný počet bodů.", true);
+
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId), {
+                score: (player.score || 0) - amount
             });
 
-            if (lastAction.type === 'transfer' && lastAction.targetId) {
-                const target = playersData.find(p => p.id === lastAction.targetId);
-                if (target) {
-                    batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', lastAction.targetId), {
-                        score: (target.score || 0) + Number(lastAction.amount || 0)
-                    });
-                }
-            }
-
-            batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', lastAction.id), {
-                undone: true,
-                undoneAt: Date.now(),
-                undoneBy: currentUser?.uid || 'admin'
+            const historyRef = collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory');
+            await addDoc(historyRef, {
+                actorId: currentUser?.uid || 'admin',
+                actorName: 'Admin',
+                createdAt: Date.now(),
+                undone: false,
+                type: 'admin_deduct',
+                label: reason,
+                amount: -amount,
+                playerId,
+                playerName: player.name,
+                targetId: playerId,
+                targetName: player.name
             });
 
-            await batch.commit();
-            showToast(`Vráceno zpět: ${lastAction.label || 'poslední akce'}`);
+            document.getElementById('admin-deduct-amount').value = '';
+            document.getElementById('admin-deduct-reason').value = '';
+            showToast(`Odebráno ${formatNum(amount)} bodů hráči ${player.name}.`);
         };
 
-        const handleAdminResetGame = async () => {
-            if (!adminUnlocked) return showToast("Nejdřív odemkni admin panel!", true);
+        const handleAdminEndCompetition = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+            if (gameState.competitionEnded) return showToast("Soutěž už je ukončená.", true);
+
+            const sure = confirm('Opravdu ukončit soutěž? Hráči už nebudou moct přidávat body ani převádět body.');
+            if (!sure) return;
+
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+                competitionEnded: true,
+                endedAt: Date.now(),
+                endedBy: currentUser?.uid || 'admin'
+            }, { merge: true });
+            showToast("Soutěž ukončena.");
+        };
+
+        const handleAdminResetTasks = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
 
-            const sure = confirm('Opravdu resetovat hru? Vynuluje se skóre, boss fighty a historie bodů.');
+            const sure = confirm('Opravdu vyresetovat úkoly? Odemknou se všechny boss fighty. Body hráčů zůstanou.');
+            if (!sure) return;
+
+            const batch = writeBatch(db);
+            const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
+            bossesSnap.docs.forEach(d => {
+                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+            });
+            await batch.commit();
+            showToast("Úkoly / boss fighty vyresetovány.");
+        };
+
+        const handleAdminDeletePlayers = async () => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+
+            const sure = confirm('Opravdu vymazat všechny hráče, jejich body, boss fighty a historii bodů?');
             if (!sure) return;
 
             const batch = writeBatch(db);
 
             const playersSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'players'));
             playersSnap.docs.forEach(d => {
-                batch.update(doc(db, 'artifacts', appId, 'public', 'data', 'players', d.id), { score: 0 });
+                batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'players', d.id));
             });
 
             const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
@@ -684,8 +795,15 @@
                 batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
             });
 
+            await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main'), {
+                competitionEnded: false,
+                endedAt: null,
+                resetAt: Date.now(),
+                resetBy: currentUser?.uid || 'admin'
+            }, { merge: true });
+
             await batch.commit();
-            showToast("Hra resetována.");
+            showToast("Všichni hráči a body byli vymazáni.");
         };
 
         // --- AUTH & SETUP ---
@@ -721,6 +839,13 @@
             unsubHistory = onSnapshot(historyQuery, (snapshot) => {
                 actionsHistory = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 renderHistory();
+            }, (err) => console.error("Firebase err:", err));
+
+            // Stav soutěže
+            const gameStateDoc = doc(db, 'artifacts', appId, 'public', 'data', 'gameState', 'main');
+            unsubGameState = onSnapshot(gameStateDoc, (snapshot) => {
+                gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, ...snapshot.data() } : { competitionEnded: false, endedAt: null };
+                renderCompetitionState();
             }, (err) => console.error("Firebase err:", err));
         };
 
@@ -787,12 +912,22 @@
                 if(unsubPlayers) unsubPlayers();
                 if(unsubBoss) unsubBoss();
                 if(unsubHistory) unsubHistory();
+                if(unsubGameState) unsubGameState();
                 if(auth) await signOut(auth);
                 localStorage.removeItem('vzp_playerName');
                 window.location.reload();
             } catch (error) {
                 console.error("Chyba odhlášení:", error);
             }
+        });
+
+        document.getElementById('btn-open-admin-modal').addEventListener('click', () => {
+            document.getElementById('admin-modal').classList.remove('hidden-view');
+            renderAdminAccess();
+        });
+
+        document.getElementById('btn-close-admin-modal').addEventListener('click', () => {
+            document.getElementById('admin-modal').classList.add('hidden-view');
         });
 
         document.getElementById('btn-transfer').addEventListener('click', handleTransfer);
@@ -835,8 +970,10 @@
             showToast("Admin panel zamčen.");
         });
 
-        document.getElementById('btn-admin-undo-last').addEventListener('click', handleAdminUndoLast);
-        document.getElementById('btn-admin-reset-game').addEventListener('click', handleAdminResetGame);
+        document.getElementById('btn-admin-deduct-points').addEventListener('click', handleAdminDeductPoints);
+        document.getElementById('btn-admin-end-competition').addEventListener('click', handleAdminEndCompetition);
+        document.getElementById('btn-admin-reset-tasks').addEventListener('click', handleAdminResetTasks);
+        document.getElementById('btn-admin-delete-players').addEventListener('click', handleAdminDeletePlayers);
 
         // Tab Navigation
         const tabs = ['score', 'leaderboard', 'rules', 'admin'];
