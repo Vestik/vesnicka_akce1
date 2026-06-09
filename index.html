@@ -64,7 +64,10 @@
                         <div id="countdown-text" class="text-sm font-black text-slate-100 truncate">Nenastaveno</div>
                     </div>
                 </div>
-                <div id="countdown-status" class="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Běží</div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <button id="btn-open-results" class="hidden-view text-[10px] font-black uppercase px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 active:scale-95">Vyhlášení</button>
+                    <div id="countdown-status" class="text-[10px] font-black uppercase px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Běží</div>
+                </div>
             </div>
         </div>
 
@@ -334,6 +337,49 @@
         </div>
     </div>
 
+    <!-- RESULTS / WINNERS MODAL -->
+    <div id="results-modal" class="hidden-view fixed inset-0 z-50 bg-slate-950/95 backdrop-blur-sm px-4 py-6 overflow-y-auto">
+        <div class="max-w-md mx-auto min-h-full flex items-center justify-center">
+            <div class="w-full bg-slate-900 border border-amber-500/30 rounded-3xl shadow-2xl p-6 relative overflow-hidden">
+                <div class="absolute -top-20 -right-20 w-44 h-44 bg-amber-500/10 rounded-full blur-3xl"></div>
+                <button id="btn-close-results-modal" class="absolute top-4 right-4 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-full p-2 active:scale-95 z-10">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+
+                <div class="relative z-10 text-center pt-4">
+                    <div class="text-5xl mb-3">🏆</div>
+                    <h2 class="text-3xl font-black uppercase text-amber-400 tracking-wider">Vyhlášení</h2>
+                    <p id="results-ended-time" class="text-slate-400 text-sm mt-1">Soutěž je ukončená.</p>
+                </div>
+
+                <div id="results-podium" class="relative z-10 mt-6 space-y-3">
+                    <div class="text-center text-slate-500 py-6 font-bold">Zatím nejsou žádní hráči.</div>
+                </div>
+
+                <div class="relative z-10 mt-5 bg-slate-950 border border-slate-800 rounded-2xl p-4">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-slate-400 font-bold uppercase text-xs">Celkový bank</span>
+                        <span id="results-total-bank" class="font-black text-amber-400">0 Kč</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3 text-center">
+                        <div class="bg-slate-900 rounded-xl p-3 border border-slate-800">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase">1. místo bere</div>
+                            <div id="results-prize-1" class="text-xl font-black text-amber-400">0 Kč</div>
+                        </div>
+                        <div class="bg-slate-900 rounded-xl p-3 border border-slate-800">
+                            <div class="text-[10px] text-slate-500 font-bold uppercase">2. místo bere</div>
+                            <div id="results-prize-2" class="text-xl font-black text-slate-200">0 Kč</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button id="btn-results-leaderboard" class="relative z-10 w-full mt-5 bg-amber-600 hover:bg-amber-500 text-amber-950 font-black py-4 rounded-xl uppercase active:scale-95 transition-transform">
+                    Zobrazit celý žebříček
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- MAIN JAVASCRIPT LOGIC -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -433,6 +479,7 @@
         let actionsHistory = [];
         let gameState = { competitionEnded: false, endedAt: null, scheduledEndAt: null };
         let countdownInterval = null;
+        let resultsAutoShownForEndedAt = sessionStorage.getItem('vzp_resultsShownForEndedAt') || '';
         let adminUnlocked = sessionStorage.getItem('vzp_adminUnlocked') === 'true';
 
         // --- NÁSTROJE ---
@@ -531,14 +578,18 @@
         const updateCountdownUI = async () => {
             const textEl = document.getElementById('countdown-text');
             const statusEl = document.getElementById('countdown-status');
+            const resultsBtn = document.getElementById('btn-open-results');
             if (!textEl || !statusEl) return;
 
             if (gameState.competitionEnded) {
                 textEl.innerText = gameState.endedAt ? `Ukončeno ${new Date(gameState.endedAt).toLocaleString('cs-CZ', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })}` : 'Soutěž ukončena';
                 statusEl.innerText = 'Konec';
                 statusEl.className = 'text-[10px] font-black uppercase px-2 py-1 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20';
+                if (resultsBtn) resultsBtn.classList.remove('hidden-view');
                 return;
             }
+
+            if (resultsBtn) resultsBtn.classList.add('hidden-view');
 
             if (!gameState.scheduledEndAt) {
                 textEl.innerText = 'Nenastaveno';
@@ -755,6 +806,81 @@
                 `).join('');
             if(playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
             renderAdminPlayersSelect();
+            renderResultsModal();
+            maybeAutoOpenResults();
+        };
+
+        const renderResultsModal = () => {
+            const podiumEl = document.getElementById('results-podium');
+            const endedTimeEl = document.getElementById('results-ended-time');
+            const totalBankEl = document.getElementById('results-total-bank');
+            const prize1El = document.getElementById('results-prize-1');
+            const prize2El = document.getElementById('results-prize-2');
+            if (!podiumEl) return;
+
+            const sortedPlayers = [...playersData].sort((a, b) => (Number(b.score || 0) - Number(a.score || 0)) || String(a.name || '').localeCompare(String(b.name || '')));
+            const totalBank = sortedPlayers.length * 100;
+            const prize1 = totalBank * 0.75;
+            const prize2 = totalBank * 0.25;
+
+            if (endedTimeEl) {
+                endedTimeEl.innerText = gameState.endedAt
+                    ? `Soutěž ukončena ${new Date(gameState.endedAt).toLocaleString('cs-CZ', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}.`
+                    : 'Soutěž je ukončená.';
+            }
+            if (totalBankEl) totalBankEl.innerText = `${formatNum(totalBank)} Kč`;
+            if (prize1El) prize1El.innerText = `${formatNum(prize1)} Kč`;
+            if (prize2El) prize2El.innerText = `${formatNum(prize2)} Kč`;
+
+            if (sortedPlayers.length === 0) {
+                podiumEl.innerHTML = `<div class="text-center text-slate-500 py-6 font-bold">Zatím nejsou žádní hráči.</div>`;
+                return;
+            }
+
+            const placeMeta = [
+                { icon: '🥇', title: 'Vítěz večera', prize: prize1, cls: 'border-amber-500/50 bg-amber-500/10 text-amber-300' },
+                { icon: '🥈', title: 'Druhé místo', prize: prize2, cls: 'border-slate-500/50 bg-slate-500/10 text-slate-200' },
+                { icon: '🥉', title: 'Třetí místo', prize: 0, cls: 'border-orange-700/50 bg-orange-900/10 text-orange-300' }
+            ];
+
+            podiumEl.innerHTML = sortedPlayers.slice(0, 5).map((p, index) => {
+                const meta = placeMeta[index] || { icon: `${index + 1}.`, title: 'Pořadí', prize: 0, cls: 'border-slate-800 bg-slate-950 text-slate-300' };
+                const prizeText = index === 0 || index === 1
+                    ? `<div class="text-xs font-black uppercase text-amber-400 mt-1">Výhra ${formatNum(meta.prize)} Kč</div>`
+                    : '';
+                return `
+                <div class="border ${meta.cls} rounded-2xl p-4 flex items-center gap-3">
+                    <div class="text-3xl w-12 text-center shrink-0">${meta.icon}</div>
+                    <div class="min-w-0 flex-grow text-left">
+                        <div class="text-[10px] font-black uppercase opacity-80">${meta.title}</div>
+                        <div class="font-black text-xl truncate text-slate-100">${p.name || 'Hráč'}</div>
+                        ${prizeText}
+                    </div>
+                    <div class="font-black text-3xl text-white shrink-0">${formatNum(Number(p.score || 0))}</div>
+                </div>
+                `;
+            }).join('');
+        };
+
+        const openResultsModal = (auto = false) => {
+            if (!gameState.competitionEnded) return showToast("Vyhlášení bude dostupné až po konci soutěže.", true);
+            renderResultsModal();
+            const modal = document.getElementById('results-modal');
+            if (modal) modal.classList.remove('hidden-view');
+            if (auto) {
+                const key = String(gameState.endedAt || 'ended');
+                resultsAutoShownForEndedAt = key;
+                sessionStorage.setItem('vzp_resultsShownForEndedAt', key);
+            }
+            lucide.createIcons();
+        };
+
+        const maybeAutoOpenResults = () => {
+            if (!gameState.competitionEnded) return;
+            if (!playersData.length) return;
+            const key = String(gameState.endedAt || 'ended');
+            if (resultsAutoShownForEndedAt === key) return;
+            openResultsModal(true);
         };
 
         // --- AKCE A LOGIKA ---
@@ -1018,6 +1144,8 @@
             unsubGameState = onSnapshot(gameStateDoc, (snapshot) => {
                 gameState = snapshot.exists() ? { competitionEnded: false, endedAt: null, scheduledEndAt: null, ...snapshot.data() } : { competitionEnded: false, endedAt: null, scheduledEndAt: null };
                 renderCompetitionState();
+                renderResultsModal();
+                maybeAutoOpenResults();
             }, (err) => console.error("Firebase err:", err));
         };
 
@@ -1103,6 +1231,17 @@
 
         document.getElementById('btn-close-admin-modal').addEventListener('click', () => {
             document.getElementById('admin-modal').classList.add('hidden-view');
+        });
+
+        document.getElementById('btn-open-results').addEventListener('click', () => openResultsModal(false));
+
+        document.getElementById('btn-close-results-modal').addEventListener('click', () => {
+            document.getElementById('results-modal').classList.add('hidden-view');
+        });
+
+        document.getElementById('btn-results-leaderboard').addEventListener('click', () => {
+            document.getElementById('results-modal').classList.add('hidden-view');
+            document.querySelector('button[data-tab="leaderboard"]')?.click();
         });
 
         document.getElementById('btn-transfer').addEventListener('click', handleTransfer);
