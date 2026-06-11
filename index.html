@@ -125,7 +125,13 @@
             <div class="relative space-y-5">
                 <div>
                     <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">Tvoje jméno / přezdívka</label>
-                    <input type="text" id="player-name" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors" placeholder="Např. Lojza">
+                    <input type="text" id="player-name" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-bold focus:border-amber-500 focus:outline-none transition-colors" placeholder="Např. Lojza" autocomplete="username">
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">PIN účtu (4 čísla)</label>
+                    <input type="password" id="player-pin" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-black tracking-[0.35em] focus:border-amber-500 focus:outline-none transition-colors" placeholder="1234" autocomplete="current-password">
+                    <p class="text-xs text-slate-500 mt-2 leading-relaxed">Nový účet se vytvoří s tímhle PINem. Existující přezdívka se otevře jen se správným PINem.</p>
                 </div>
 
                 <div class="space-y-3">
@@ -487,7 +493,7 @@
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
-                        <h3 class="font-black uppercase text-slate-200 mb-3">Odebrat body hráči</h3>
+                        <h3 class="font-black uppercase text-slate-200 mb-3">Upravit body hráči</h3>
                         <select id="admin-deduct-player" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 mb-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
                             <option value="">-- Vyber hráče --</option>
                         </select>
@@ -495,9 +501,22 @@
                             <input type="number" id="admin-deduct-amount" placeholder="Kolik bodů" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
                             <input type="text" id="admin-deduct-reason" placeholder="Důvod" class="w-full bg-slate-900 border border-slate-700 rounded-xl p-3 text-slate-200 font-bold focus:outline-none focus:border-amber-500">
                         </div>
-                        <button id="btn-admin-deduct-points" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-bold py-4 rounded-xl active:scale-95 transition-transform uppercase">
-                            Odebrat body
-                        </button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-admin-deduct-points" class="w-full bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase text-lg">
+                                − Odebrat
+                            </button>
+                            <button id="btn-admin-add-points" class="w-full bg-emerald-900/40 hover:bg-emerald-900/60 border border-emerald-800 text-emerald-200 font-black py-4 rounded-xl active:scale-95 transition-transform uppercase text-lg">
+                                + Přičíst
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-950 border border-purple-900/60 rounded-2xl p-4">
+                        <h3 class="font-black uppercase text-purple-200 mb-2 flex items-center gap-2"><i data-lucide="users" class="w-5 h-5"></i> Účty a PINy</h3>
+                        <p class="text-xs text-slate-500 mb-3 leading-relaxed">Přehled všech hráčských účtů. PIN je uložený viditelně, aby ho admin mohl hráči připomenout.</p>
+                        <div id="admin-accounts-container" class="space-y-2">
+                            <div class="text-center text-slate-500 py-4 font-bold">Zatím žádné účty.</div>
+                        </div>
                     </div>
 
                     <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4">
@@ -726,6 +745,7 @@
         let bossFightData = {};
         let toastTimeout = null;
         let myPlayerName = localStorage.getItem('vzp_playerName') || '';
+        let activePlayerId = localStorage.getItem('vzp_playerId') || '';
         const hadStoredPlayerNameOnLoad = !!myPlayerName;
         let playerSessionStartedAt = myPlayerName ? Date.now() : 0;
         let unsubPlayers = null;
@@ -797,6 +817,14 @@
         const getAllBosses = () => [...getVisibleDefaultItems('boss', bosses), ...getItemsByCategory('boss')];
         const getAllDebuffs = () => [...getVisibleDefaultItems('debuff', debuffs), ...getItemsByCategory('debuff')];
         const isHappyHourActive = () => !!gameState.happyHourUntil && Number(gameState.happyHourUntil) > Date.now() && !gameState.competitionEnded;
+        const normalizePlayerNameKey = (value) => String(value || '')
+            .trim()
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, ' ');
+        const getActivePlayerId = () => activePlayerId || currentUser?.uid || '';
+        const getMyPlayerData = () => playersData.find(p => p.id === getActivePlayerId()) || { score: 0, name: myPlayerName };
 
         const showToast = (msg, isError = false) => {
             const toastEl = document.getElementById('toast');
@@ -815,7 +843,7 @@
 
 
         const getPlayerNameById = (playerId) => {
-            if (playerId === currentUser?.uid) return myPlayerName || 'Ty';
+            if (playerId === getActivePlayerId()) return myPlayerName || 'Ty';
             return playersData.find(p => p.id === playerId)?.name || 'Neznámý hráč';
         };
 
@@ -823,7 +851,7 @@
             if (!db || !currentUser) return;
             const historyRef = collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory');
             await addDoc(historyRef, {
-                actorId: currentUser.uid,
+                actorId: getActivePlayerId() || currentUser.uid,
                 actorName: myPlayerName || 'Neznámý hráč',
                 createdAt: Date.now(),
                 undone: false,
@@ -844,6 +872,7 @@
                 panelBox.classList.add('hidden-view');
             }
             renderAdminPlayersSelect();
+            renderAdminAccounts();
             renderCompetitionState();
             updateHappyHourUI();
             lucide.createIcons();
@@ -854,9 +883,35 @@
             if (!selectEl) return;
             const currentVal = selectEl.value;
             selectEl.innerHTML = `<option value="">-- Vyber hráče --</option>` + playersData.map(p => `
-                <option value="${p.id}">${p.name} (${formatNum(p.score || 0)} b.)</option>
+                <option value="${p.id}">${escapeHtml(p.name)} (${formatNum(p.score || 0)} b.)</option>
             `).join('');
             if (playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
+        };
+
+        const renderAdminAccounts = () => {
+            const container = document.getElementById('admin-accounts-container');
+            if (!container) return;
+
+            if (!playersData.length) {
+                container.innerHTML = `<div class="text-center text-slate-500 py-4 font-bold">Zatím žádné účty.</div>`;
+                return;
+            }
+
+            container.innerHTML = playersData.map(p => `
+                <div class="bg-slate-900 border border-slate-800 rounded-xl p-3">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="font-black text-slate-100 truncate">${escapeHtml(p.name || 'Bez jména')}</div>
+                            <div class="text-xs text-slate-400 font-bold mt-1">Body: ${formatNum(p.score || 0)}</div>
+                            <div class="text-xs text-purple-200 font-black mt-1 tracking-widest">PIN: ${escapeHtml(p.pin || '----')}</div>
+                        </div>
+                        <button type="button" data-action="delete-player-account" data-player-id="${p.id}" class="bg-rose-900/40 hover:bg-rose-900/60 border border-rose-800 text-rose-200 font-black px-3 py-2 rounded-xl active:scale-95 uppercase text-xs shrink-0">
+                            Smazat
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            lucide.createIcons();
         };
 
         const renderCompetitionState = () => {
@@ -1139,7 +1194,7 @@
         };
 
         const updateMyScoreUI = () => {
-            const myData = playersData.find(p => p.id === currentUser?.uid) || { score: 0 };
+            const myData = getMyPlayerData();
             document.getElementById('my-score-display').innerText = formatNum(myData.score || 0);
             document.getElementById('top-my-score').innerText = formatNum(myData.score || 0);
         };
@@ -1166,7 +1221,7 @@
             }
 
             container.innerHTML = playersData.map((p, index) => {
-                const isMe = currentUser && p.id === currentUser.uid;
+                const isMe = currentUser && p.id === getActivePlayerId();
                 const isFirst = index === 0;
                 const isSecond = index === 1;
 
@@ -1192,7 +1247,7 @@
             const selectEl = document.getElementById('transfer-target');
             const currentVal = selectEl.value;
             selectEl.innerHTML = `<option value="">-- Vyber hráče --</option>` + 
-                playersData.filter(p => p.id !== currentUser?.uid).map(p => `
+                playersData.filter(p => p.id !== getActivePlayerId()).map(p => `
                     <option value="${p.id}">${p.name} (${formatNum(p.score)} b.)</option>
                 `).join('');
             if(playersData.find(p => p.id === currentVal)) selectEl.value = currentVal;
@@ -1354,8 +1409,8 @@
                 if (remaining > 0) return showToast(`Drink cooldown: počkej ještě ${Math.ceil(remaining / 1000)} s.`, true);
                 lastDrinkActionAt = now;
             }
-            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
-            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+            const myData = getMyPlayerData();
+            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', getActivePlayerId());
 
             let finalAmount = Number(amount || 0);
             const multiplierNotes = [];
@@ -1376,7 +1431,7 @@
                 label: multiplierNotes.length ? `${label} (${multiplierNotes.join(', ')})` : label,
                 category: options.category || 'other',
                 amount: finalAmount,
-                playerId: currentUser.uid,
+                playerId: getActivePlayerId(),
                 playerName: myPlayerName || myData.name || 'Neznámý hráč'
             });
 
@@ -1394,7 +1449,7 @@
             }
             
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', bossId);
-            await setDoc(docRef, { claimedBy: myPlayerName, claimedById: currentUser.uid });
+            await setDoc(docRef, { claimedBy: myPlayerName, claimedById: getActivePlayerId() });
             handleAddPoints(bossPts, `EPICKÉ! +${formatNum(bossPts)} za Boss Fight!`, `Boss Fight: ${bossName}`);
         };
 
@@ -1411,9 +1466,9 @@
             const targetPlayer = playersData.find(p => p.id === targetId);
             if (!targetPlayer) return showToast("Hráč nenalezen!", true);
 
-            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
+            const myData = getMyPlayerData();
             
-            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid), { 
+            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', getActivePlayerId()), { 
                 score: myData.score - amount 
             });
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', targetId), { 
@@ -1423,7 +1478,7 @@
                 type: 'transfer',
                 label: 'Převod bodů',
                 amount: -amount,
-                playerId: currentUser.uid,
+                playerId: getActivePlayerId(),
                 playerName: myPlayerName,
                 targetId,
                 targetName: targetPlayer.name
@@ -1530,7 +1585,7 @@
             if (gameState.competitionEnded) return showToast("Soutěž už je ukončená. Kolo štěstí je vypnuté.", true);
 
             const cost = 25;
-            const myData = playersData.find(p => p.id === currentUser.uid) || { score: 0 };
+            const myData = getMyPlayerData();
             if (Number(myData.score || 0) < cost) return showToast("Na zatočení potřebuješ aspoň 25 bodů.", true);
 
             const btn = document.getElementById('btn-spin-wheel');
@@ -1579,7 +1634,7 @@
             await sleep(3100);
 
             const netAmount = -cost + Number(outcome.delta || 0);
-            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
+            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', getActivePlayerId());
             const payload = { score: Number(myData.score || 0) + netAmount };
             if (outcome.nextDouble) payload.wheelNextDouble = true;
             await updateDoc(playerDoc, payload);
@@ -1588,7 +1643,7 @@
                 type: 'wheel',
                 label: `Kolo štěstí: ${outcome.title}`,
                 amount: netAmount,
-                playerId: currentUser.uid,
+                playerId: getActivePlayerId(),
                 playerName: myPlayerName || myData.name || 'Neznámý hráč'
             });
 
@@ -1606,20 +1661,23 @@
             showToast(`${isGood ? 'Štěstí!' : 'Smůla!'} ${outcome.title}` , !isGood);
         };
 
-        const handleAdminDeductPoints = async () => {
+        const handleAdminAdjustPoints = async (direction = -1) => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
 
             const playerId = document.getElementById('admin-deduct-player').value;
             const amount = parseFloat(document.getElementById('admin-deduct-amount').value);
-            const reason = document.getElementById('admin-deduct-reason').value.trim() || 'Odebrání bodů adminem';
+            const isAdd = Number(direction) > 0;
+            const fallbackReason = isAdd ? 'Přičtení bodů adminem' : 'Odebrání bodů adminem';
+            const reason = document.getElementById('admin-deduct-reason').value.trim() || fallbackReason;
             const player = playersData.find(p => p.id === playerId);
 
             if (!playerId || !player) return showToast("Vyber hráče.", true);
             if (isNaN(amount) || amount <= 0) return showToast("Zadej platný počet bodů.", true);
 
+            const signedAmount = isAdd ? amount : -amount;
             await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId), {
-                score: (player.score || 0) - amount
+                score: Number(player.score || 0) + signedAmount
             });
 
             const historyRef = collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory');
@@ -1628,9 +1686,9 @@
                 actorName: 'Admin',
                 createdAt: Date.now(),
                 undone: false,
-                type: 'admin_deduct',
+                type: isAdd ? 'admin_add' : 'admin_deduct',
                 label: reason,
-                amount: -amount,
+                amount: signedAmount,
                 playerId,
                 playerName: player.name,
                 targetId: playerId,
@@ -1639,7 +1697,41 @@
 
             document.getElementById('admin-deduct-amount').value = '';
             document.getElementById('admin-deduct-reason').value = '';
-            showToast(`Odebráno ${formatNum(amount)} bodů hráči ${player.name}.`);
+            showToast(`${isAdd ? 'Přičteno' : 'Odebráno'} ${formatNum(amount)} bodů hráči ${player.name}.`);
+        };
+
+        const handleAdminDeductPoints = () => handleAdminAdjustPoints(-1);
+        const handleAdminAddPoints = () => handleAdminAdjustPoints(1);
+
+        const handleAdminDeletePlayerAccount = async (playerId) => {
+            if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
+            if (!db) return;
+
+            const player = playersData.find(p => p.id === playerId);
+            if (!player) return showToast("Účet nebyl nalezen.", true);
+            if (!confirm(`Opravdu smazat účet ${player.name}? Smažou se i jeho záznamy v logu a obsazené boss fighty.`)) return;
+
+            const batch = writeBatch(db);
+            batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId));
+
+            const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
+            bossesSnap.docs.forEach(d => {
+                const data = d.data();
+                if (data.claimedById === playerId || data.claimedBy === player.name) {
+                    batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+                }
+            });
+
+            const historySnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory'));
+            historySnap.docs.forEach(d => {
+                const data = d.data();
+                if (data.playerId === playerId || data.targetId === playerId || data.actorId === playerId) {
+                    batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
+                }
+            });
+
+            await batch.commit();
+            showToast(`Účet ${player.name} byl smazán.`);
         };
 
         const handleAdminSetEndTime = async () => {
@@ -1759,6 +1851,8 @@
             try {
                 localStorage.setItem('vzp_lastGameResetAt', String(resetAt || Date.now()));
                 localStorage.removeItem('vzp_playerName');
+                localStorage.removeItem('vzp_playerId');
+                activePlayerId = '';
                 sessionStorage.removeItem('vzp_adminUnlocked');
                 sessionStorage.removeItem('vzp_resultsShownForEndedAt');
                 myPlayerName = '';
@@ -1798,7 +1892,7 @@
 
         // --- AUTH & SETUP ---
         const startRealtimeListeners = () => {
-            if (!currentUser || !db) return;
+            if (!currentUser || !db || !activePlayerId) return;
 
             document.getElementById('account-name').innerText = myPlayerName;
 
@@ -1808,7 +1902,7 @@
                 playersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 playersData.sort((a, b) => b.score - a.score);
 
-                if (currentUser && myPlayerName && !playersData.find(p => p.id === currentUser.uid)) {
+                if (currentUser && myPlayerName && activePlayerId && !playersData.find(p => p.id === getActivePlayerId())) {
                     localStorage.removeItem('vzp_playerName');
                     myPlayerName = '';
                     showToast('Hra byla resetována. Přihlas se znovu.', true);
@@ -1820,6 +1914,7 @@
                 }
                 
                 renderLeaderboard();
+                renderAdminAccounts();
                 updateTopBar();
                 updateMyScoreUI();
             }, (err) => console.error("Firebase err:", err));
@@ -1891,6 +1986,11 @@
             onAuthStateChanged(auth, (u) => {
                 currentUser = u;
                 if (u && myPlayerName) {
+                    if (!activePlayerId) {
+                        // Kompatibilita se starší verzí bez PINu: starý lokální účet zůstane navázaný na původní anonymní UID.
+                        activePlayerId = u.uid;
+                        localStorage.setItem('vzp_playerId', activePlayerId);
+                    }
                     document.getElementById('login-screen').classList.add('hidden-view');
                     document.getElementById('main-screen').classList.remove('hidden-view');
                     startRealtimeListeners();
@@ -1904,29 +2004,57 @@
         // --- EVENT LISTENERS ---
         document.getElementById('btn-login').addEventListener('click', async () => {
             const nameInput = document.getElementById('player-name').value.trim();
+            const pinInput = document.getElementById('player-pin').value.trim();
             const readHowto = document.getElementById('read-howto-status').checked;
             const paid = document.getElementById('paid-status').checked;
 
             if (!auth || !db) return showToast("Aplikace potřebuje nastavit Firebase v kódu!", true);
             if (!nameInput) return showToast("Zadej svoje jméno / přezdívku.", true);
+            if (!/^\d{4}$/.test(pinInput)) return showToast("PIN musí mít přesně 4 čísla.", true);
             if (!readHowto) return showToast("Nejdřív potvrď, že jsi četl 'Jak na to'.", true);
             if (!paid) return showToast("Nejdřív potvrď, že jsi dal 100 Kč do banku.", true);
             if (!currentUser) return showToast("Načítám spojení, zkus to za vteřinu...", true);
 
-            myPlayerName = nameInput;
+            const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'players');
+            const wantedNameKey = normalizePlayerNameKey(nameInput);
+            const playersSnap = await getDocs(playersRef);
+            const existingPlayer = playersSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .find(p => normalizePlayerNameKey(p.nameKey || p.name) === wantedNameKey);
+
+            if (existingPlayer) {
+                if (existingPlayer.pin && String(existingPlayer.pin) !== pinInput) {
+                    return showToast("Špatný PIN pro tuhle přezdívku.", true);
+                }
+
+                activePlayerId = existingPlayer.id;
+                myPlayerName = existingPlayer.name || nameInput;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', activePlayerId), {
+                    name: myPlayerName,
+                    nameKey: wantedNameKey,
+                    pin: pinInput,
+                    lastLoginAt: Date.now(),
+                    lastAuthUid: currentUser.uid
+                }, { merge: true });
+            } else {
+                activePlayerId = currentUser.uid;
+                myPlayerName = nameInput;
+                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', activePlayerId), {
+                    name: myPlayerName,
+                    nameKey: wantedNameKey,
+                    pin: pinInput,
+                    score: 0,
+                    joinedAt: Date.now(),
+                    createdAuthUid: currentUser.uid,
+                    lastLoginAt: Date.now()
+                }, { merge: true });
+            }
+
             playerSessionStartedAt = Date.now();
             localStorage.setItem('vzp_playerName', myPlayerName);
+            localStorage.setItem('vzp_playerId', activePlayerId);
             if (gameState.resetAt) {
                 localStorage.setItem('vzp_lastGameResetAt', String(gameState.resetAt));
-            }
-            
-            const playerDoc = doc(db, 'artifacts', appId, 'public', 'data', 'players', currentUser.uid);
-            const docSnap = await getDoc(playerDoc);
-            
-            if (docSnap.exists()) {
-                await setDoc(playerDoc, { name: myPlayerName }, { merge: true });
-            } else {
-                await setDoc(playerDoc, { name: myPlayerName, score: 0, joinedAt: Date.now() }, { merge: true });
             }
 
             document.getElementById('login-screen').classList.add('hidden-view');
@@ -1943,6 +2071,8 @@
                 if(unsubCustomItems) unsubCustomItems();
                 if(auth) await signOut(auth);
                 localStorage.removeItem('vzp_playerName');
+                localStorage.removeItem('vzp_playerId');
+                activePlayerId = '';
                 window.location.reload();
             } catch (error) {
                 console.error("Chyba odhlášení:", error);
@@ -2016,6 +2146,9 @@
             } else if (action === 'unlock-boss') {
                 const id = btn.getAttribute('data-boss-id');
                 handleAdminUnlockBoss(id);
+            } else if (action === 'delete-player-account') {
+                const id = btn.getAttribute('data-player-id');
+                handleAdminDeletePlayerAccount(id);
             } else if (action === 'delete-custom-item') {
                 const id = btn.getAttribute('data-item-id');
                 handleAdminDeleteCustomItem(id);
@@ -2046,6 +2179,7 @@
         });
 
         document.getElementById('btn-admin-deduct-points').addEventListener('click', handleAdminDeductPoints);
+        document.getElementById('btn-admin-add-points').addEventListener('click', handleAdminAddPoints);
         document.getElementById('btn-admin-add-custom-item').addEventListener('click', handleAdminAddCustomItem);
         document.getElementById('btn-admin-restore-default-items').addEventListener('click', handleAdminRestoreDefaultItems);
         document.getElementById('btn-admin-start-happy-hour').addEventListener('click', handleAdminStartHappyHour);
