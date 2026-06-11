@@ -1703,35 +1703,76 @@
         const handleAdminDeductPoints = () => handleAdminAdjustPoints(-1);
         const handleAdminAddPoints = () => handleAdminAdjustPoints(1);
 
+        const commitDeleteRefsInChunks = async (refs, chunkSize = 400) => {
+            for (let i = 0; i < refs.length; i += chunkSize) {
+                const batch = writeBatch(db);
+                refs.slice(i, i + chunkSize).forEach(ref => batch.delete(ref));
+                await batch.commit();
+            }
+        };
+
         const handleAdminDeletePlayerAccount = async (playerId) => {
             if (!adminUnlocked) return showToast("Nejdřív odemkni admin správu!", true);
             if (!db) return;
 
             const player = playersData.find(p => p.id === playerId);
             if (!player) return showToast("Účet nebyl nalezen.", true);
-            if (!confirm(`Opravdu smazat účet ${player.name}? Smažou se i jeho záznamy v logu a obsazené boss fighty.`)) return;
 
-            const batch = writeBatch(db);
-            batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId));
+            const playerName = player.name || 'Bez jména';
+            if (!confirm(`Opravdu smazat účet ${playerName}? Účet zmizí ze žebříčku. Potom se aplikace pokusí uklidit i jeho logy a obsazené boss fighty.`)) return;
 
-            const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
-            bossesSnap.docs.forEach(d => {
-                const data = d.data();
-                if (data.claimedById === playerId || data.claimedBy === player.name) {
-                    batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+            try {
+                // Nejdřív smažeme samotný účet samostatně. Kdyby cleanup logů selhal nebo jich bylo moc,
+                // účet se i tak správně smaže ze seznamu účtů a žebříčku.
+                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'players', playerId));
+
+                const refsToClean = [];
+
+                const bossesSnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'bossFights'));
+                bossesSnap.docs.forEach(d => {
+                    const data = d.data();
+                    if (data.claimedById === playerId || data.claimdById === playerId || data.claimedBy === playerName) {
+                        refsToClean.push(doc(db, 'artifacts', appId, 'public', 'data', 'bossFights', d.id));
+                    }
+                });
+
+                const historySnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory'));
+                historySnap.docs.forEach(d => {
+                    const data = d.data();
+                    if (
+                        data.playerId === playerId ||
+                        data.targetId === playerId ||
+                        data.actorId === playerId ||
+                        data.fromId === playerId ||
+                        data.toId === playerId ||
+                        data.playerName === playerName ||
+                        data.targetName === playerName ||
+                        data.actorName === playerName
+                    ) {
+                        refsToClean.push(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
+                    }
+                });
+
+                if (refsToClean.length) {
+                    await commitDeleteRefsInChunks(refsToClean);
                 }
-            });
 
-            const historySnap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'actionHistory'));
-            historySnap.docs.forEach(d => {
-                const data = d.data();
-                if (data.playerId === playerId || data.targetId === playerId || data.actorId === playerId) {
-                    batch.delete(doc(db, 'artifacts', appId, 'public', 'data', 'actionHistory', d.id));
+                showToast(`Účet ${playerName} byl smazán.`);
+
+                if (playerId === getActivePlayerId()) {
+                    localStorage.removeItem('vzp_playerName');
+                    localStorage.removeItem('vzp_playerId');
+                    activePlayerId = '';
+                    myPlayerName = '';
+                    setTimeout(async () => {
+                        try { if (auth) await signOut(auth); } catch (e) {}
+                        window.location.reload();
+                    }, 800);
                 }
-            });
-
-            await batch.commit();
-            showToast(`Účet ${player.name} byl smazán.`);
+            } catch (error) {
+                console.error('Mazání účtu selhalo:', error);
+                showToast(`Mazání účtu selhalo: ${error.message || error.code || 'neznámá chyba'}`, true);
+            }
         };
 
         const handleAdminSetEndTime = async () => {
@@ -1905,7 +1946,7 @@
                 if (currentUser && myPlayerName && activePlayerId && !playersData.find(p => p.id === getActivePlayerId())) {
                     localStorage.removeItem('vzp_playerName');
                     myPlayerName = '';
-                    showToast('Hra byla resetována. Přihlas se znovu.', true);
+                    showToast('Tvůj účet už neexistuje. Přihlas se znovu nebo vytvoř nový účet.', true);
                     setTimeout(async () => {
                         try { if (auth) await signOut(auth); } catch (e) {}
                         window.location.reload();
