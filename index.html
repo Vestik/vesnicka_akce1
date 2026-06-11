@@ -130,7 +130,13 @@
 
                 <div>
                     <label class="block text-sm font-bold text-slate-400 mb-2 uppercase">PIN účtu (4 čísla)</label>
-                    <input type="password" id="player-pin" inputmode="numeric" maxlength="4" pattern="[0-9]*" class="w-full bg-slate-950 border-2 border-slate-800 rounded-xl p-4 text-xl font-black tracking-[0.35em] focus:border-amber-500 focus:outline-none transition-colors" placeholder="1234" autocomplete="current-password">
+                    <div id="pin-boxes" class="grid grid-cols-4 gap-3">
+                        <input type="password" inputmode="numeric" maxlength="1" pattern="[0-9]" data-pin-index="0" aria-label="PIN číslice 1" class="pin-digit w-full h-16 bg-slate-950 border-2 border-slate-800 rounded-2xl text-center text-3xl font-black text-amber-300 focus:border-amber-500 focus:outline-none transition-colors" autocomplete="one-time-code">
+                        <input type="password" inputmode="numeric" maxlength="1" pattern="[0-9]" data-pin-index="1" aria-label="PIN číslice 2" class="pin-digit w-full h-16 bg-slate-950 border-2 border-slate-800 rounded-2xl text-center text-3xl font-black text-amber-300 focus:border-amber-500 focus:outline-none transition-colors" autocomplete="off">
+                        <input type="password" inputmode="numeric" maxlength="1" pattern="[0-9]" data-pin-index="2" aria-label="PIN číslice 3" class="pin-digit w-full h-16 bg-slate-950 border-2 border-slate-800 rounded-2xl text-center text-3xl font-black text-amber-300 focus:border-amber-500 focus:outline-none transition-colors" autocomplete="off">
+                        <input type="password" inputmode="numeric" maxlength="1" pattern="[0-9]" data-pin-index="3" aria-label="PIN číslice 4" class="pin-digit w-full h-16 bg-slate-950 border-2 border-slate-800 rounded-2xl text-center text-3xl font-black text-amber-300 focus:border-amber-500 focus:outline-none transition-colors" autocomplete="off">
+                    </div>
+                    <input type="hidden" id="player-pin" autocomplete="current-password">
                     <p class="text-xs text-slate-500 mt-2 leading-relaxed">Nový účet se vytvoří s tímhle PINem. Existující přezdívka se otevře jen se správným PINem.</p>
                 </div>
 
@@ -2041,6 +2047,84 @@
                 }
             });
         };
+
+        const setupPlayerPinBoxes = () => {
+            const boxes = Array.from(document.querySelectorAll('.pin-digit'));
+            const hiddenPinInput = document.getElementById('player-pin');
+            if (!boxes.length || !hiddenPinInput) return;
+
+            const syncPinValue = () => {
+                hiddenPinInput.value = boxes.map(box => box.value.replace(/\D/g, '').slice(0, 1)).join('');
+            };
+
+            const focusBox = (index) => {
+                const target = boxes[index];
+                if (!target) return;
+                target.focus();
+                target.select();
+            };
+
+            boxes.forEach((box, index) => {
+                box.addEventListener('input', (event) => {
+                    const digits = event.target.value.replace(/\D/g, '');
+
+                    if (!digits) {
+                        event.target.value = '';
+                        syncPinValue();
+                        return;
+                    }
+
+                    if (digits.length > 1) {
+                        digits.slice(0, boxes.length - index).split('').forEach((digit, offset) => {
+                            boxes[index + offset].value = digit;
+                        });
+                        syncPinValue();
+                        focusBox(Math.min(index + digits.length, boxes.length - 1));
+                        return;
+                    }
+
+                    event.target.value = digits;
+                    syncPinValue();
+                    if (index < boxes.length - 1) focusBox(index + 1);
+                });
+
+                box.addEventListener('keydown', (event) => {
+                    if (event.key === 'Backspace' && !box.value && index > 0) {
+                        boxes[index - 1].value = '';
+                        syncPinValue();
+                        focusBox(index - 1);
+                        event.preventDefault();
+                    }
+
+                    if (event.key === 'ArrowLeft' && index > 0) {
+                        focusBox(index - 1);
+                        event.preventDefault();
+                    }
+
+                    if (event.key === 'ArrowRight' && index < boxes.length - 1) {
+                        focusBox(index + 1);
+                        event.preventDefault();
+                    }
+                });
+
+                box.addEventListener('paste', (event) => {
+                    const pasted = (event.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, boxes.length);
+                    if (!pasted) return;
+                    event.preventDefault();
+                    boxes.forEach((target, targetIndex) => {
+                        target.value = pasted[targetIndex] || '';
+                    });
+                    syncPinValue();
+                    focusBox(Math.min(pasted.length, boxes.length) - 1);
+                });
+
+                box.addEventListener('focus', () => box.select());
+            });
+
+            syncPinValue();
+        };
+
+        setupPlayerPinBoxes();
 
         // --- EVENT LISTENERS ---
         document.getElementById('btn-login').addEventListener('click', async () => {
